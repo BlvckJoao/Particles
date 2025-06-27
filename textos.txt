@@ -1,0 +1,35 @@
+ok vou fazer esse projetinho relampago aqui para aumentar
+as habilidades
+
+esse txt vai ser como mmeu dev log
+
+Primeiro passo é pesquisar como vou criar essa bexiga
+logo depois vou anotar o passo a passo aqui e cada um que eu cumprir e testar dou commit
+
+um diagrama uml talvez seja interessante
+depois disso vou criar o repositório no github e começar a codar
+
+vomeçar tirando o autocomplete do vscode
+
+agora sim
+
+
+Projetando:
+
+1- Botar a OpenGL para funcionar.
+    -Usarei GLAD e GLFW para abrir uma janela simples
+
+2- Definir o struct de particula.
+    -Ainda decidirei o metodo de fisica que usarei nessa simulação, se uso o verlet integration ou o método de Euler, veremos
+
+3- Pesquisar bastante sobre simulações
+
+4- Criar a estrutura do projeto com diagramas (resumidamente)
+
+5- Implementar o codigo
+
+Devlog 1:
+
+-Deu trabalho fazer a OpenGL funcionar no GLtest mas deu certo, melhor so copiar o que funcionou antes.
+-Unica coisa que mudarei é incluir os diretorios das libs para compilação nas pastas do projeto mesmo, é o padraão do open source
+-Por agora, vou commitar no gitub em privado, pra eu mexer quando eu quiser depois

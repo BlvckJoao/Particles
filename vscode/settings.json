@@ -1,0 +1,13 @@
+{
+    "editor.suggestOnTriggerCharacters": false,
+    "editor.quickSuggestions": false,
+    "javascript.suggest.enabled": false,
+    "typescript.suggest.enabled": false,
+ 
+    "C_Cpp.autocomplete": "Disabled",
+    
+    "editor.suggest.showWords": false,
+    "editor.suggest.showSnippets": false,
+    "editor.suggest.showFunctions": false,
+    "editor.suggest.showVariables": false
+}
