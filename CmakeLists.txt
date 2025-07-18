@@ -1,0 +1,44 @@
+cmake_minimum_required(VERSION 3.10)
+project(OpenGLProject)
+
+set(CMAKE_CXX_STANDARD 17)
+
+# Configurações para GLFW e Glad
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+# Adiciona o diretório libs como local de busca
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/libs")
+
+# Encontra GLFW
+find_package(glfw3 REQUIRED)
+
+# Configurações para Glad
+include_directories("${CMAKE_SOURCE_DIR}/libs/glad/include")
+
+# Arquivos fonte
+add_executable(opengl_app
+    main.cpp
+    # Se você tiver o arquivo glad.c, adicione aqui
+    libs/glad/src/glad.c
+)
+
+# Linkando bibliotecas
+target_link_libraries(opengl_app
+    glfw
+    # Outras bibliotecas necessárias para seu sistema
+    ${GLFW_LIBRARIES}
+)
+
+# No Linux/Mac, você pode precisar adicionar:
+if(UNIX AND NOT APPLE)
+    target_link_libraries(opengl_app GL X11 pthread dl)
+elseif(APPLE)
+    target_link_libraries(opengl_app
+        "-framework OpenGL"
+        "-framework Cocoa"
+        "-framework IOKit"
+        "-framework CoreVideo"
+    )
+endif()
