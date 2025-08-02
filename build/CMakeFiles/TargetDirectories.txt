@@ -1,0 +1,3 @@
+C:/PROJETOS/C_C++/Particles/build/CMakeFiles/ParticleSim.dir
+C:/PROJETOS/C_C++/Particles/build/CMakeFiles/edit_cache.dir
+C:/PROJETOS/C_C++/Particles/build/CMakeFiles/rebuild_cache.dir

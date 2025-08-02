@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\ParticleSim.dir/objects.a
+C:\mingw64\bin\ar.exe qc CMakeFiles\ParticleSim.dir/objects.a @CMakeFiles\ParticleSim.dir\objects1.rsp
+g++ -Wl,--whole-archive CMakeFiles\ParticleSim.dir/objects.a -Wl,--no-whole-archive -o bin\ParticleSim.exe -Wl,--out-implib,lib\libParticleSim.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\ParticleSim.dir\linkLibs.rsp

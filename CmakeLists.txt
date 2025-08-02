@@ -1,44 +1,74 @@
 cmake_minimum_required(VERSION 3.10)
-project(OpenGLProject)
+project(ParticleSimulation)
 
+# Configura o compilador MinGW
+set(CMAKE_C_COMPILER "gcc")
+set(CMAKE_CXX_COMPILER "g++")
+set(CMAKE_MAKE_PROGRAM "mingw32-make")
+
+# Configurações básicas
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Configurações para GLFW e Glad
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# Opções específicas para Windows
+if(WIN32)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
 
-# Adiciona o diretório libs como local de busca
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/libs")
-
-# Encontra GLFW
-find_package(glfw3 REQUIRED)
-
-# Configurações para Glad
-include_directories("${CMAKE_SOURCE_DIR}/libs/glad/include")
-
-# Arquivos fonte
-add_executable(opengl_app
-    main.cpp
-    # Se você tiver o arquivo glad.c, adicione aqui
-    libs/glad/src/glad.c
+# Configura os diretórios de include
+include_directories(
+    ${CMAKE_SOURCE_DIR}/libs/glad/include
+    ${CMAKE_SOURCE_DIR}/libs/glfw/include
+    ${CMAKE_SOURCE_DIR}/libs/glm  # Diretório pai que contém a pasta glm/
+    ${CMAKE_SOURCE_DIR}/physics
+    ${CMAKE_SOURCE_DIR}
 )
 
-# Linkando bibliotecas
-target_link_libraries(opengl_app
-    glfw
-    # Outras bibliotecas necessárias para seu sistema
-    ${GLFW_LIBRARIES}
+# Configura os arquivos fonte
+set(SOURCES
+    sim_2d.cpp
+    ${CMAKE_SOURCE_DIR}/libs/glad/src/glad.c
 )
 
-# No Linux/Mac, você pode precisar adicionar:
-if(UNIX AND NOT APPLE)
-    target_link_libraries(opengl_app GL X11 pthread dl)
-elseif(APPLE)
-    target_link_libraries(opengl_app
-        "-framework OpenGL"
-        "-framework Cocoa"
-        "-framework IOKit"
-        "-framework CoreVideo"
+# Cria o executável
+add_executable(ParticleSim ${SOURCES})
+
+# Configurações de link para MinGW no Windows
+if(WIN32)
+    # Link com as bibliotecas necessárias
+    target_link_libraries(ParticleSim
+        opengl32
+        gdi32
     )
+    
+    # Se estiver usando GLFW compilado localmente
+    if(EXISTS "${CMAKE_SOURCE_DIR}/libs/glfw/build/src/libglfw3.a")
+        target_link_libraries(ParticleSim
+            ${CMAKE_SOURCE_DIR}/libs/glfw/build/src/libglfw3.a
+        )
+    else()
+        # Tenta encontrar o GLFW instalado no sistema
+        find_package(glfw3 REQUIRED)
+        if(glfw3_FOUND)
+            target_link_libraries(ParticleSim glfw)
+        else()
+            message(FATAL_ERROR "GLFW não encontrado!")
+        endif()
+    endif()
+endif()
+
+# Configurações adicionais para MinGW
+set_target_properties(ParticleSim PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+)
+
+message(STATUS "Procurando GLM em: ${CMAKE_SOURCE_DIR}/libs/glm")
+if(EXISTS "${CMAKE_SOURCE_DIR}/libs/glm/glm/glm.hpp")
+    message(STATUS "GLM encontrado!")
+else()
+    message(FATAL_ERROR "Arquivo glm.hpp não encontrado! Caminho esperado: ${CMAKE_SOURCE_DIR}/libs/glm/glm/glm.hpp")
 endif()

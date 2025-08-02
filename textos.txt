@@ -33,3 +33,10 @@ Devlog 1:
 -Deu trabalho fazer a OpenGL funcionar no GLtest mas deu certo, melhor so copiar o que funcionou antes.
 -Unica coisa que mudarei é incluir os diretorios das libs para compilação nas pastas do projeto mesmo, é o padraão do open source
 -Por agora, vou commitar no gitub em privado, pra eu mexer quando eu quiser depois
+
+Devlog 2:
+
+-Comecei a simulação implementando o classico metodo de Euler mesmo, vou ler um pouco sobre runge Kutta e Verlet integration tbm
+Uma base com calculo numerico e otimização vai me ajudar aqui com certeza
+
+-tbm tenho que assistir aquele curso sobre OpenGl e ver o que pode ser bom

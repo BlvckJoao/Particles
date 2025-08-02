@@ -1,13 +1,16 @@
 {
-    "editor.suggestOnTriggerCharacters": false,
-    "editor.quickSuggestions": false,
-    "javascript.suggest.enabled": false,
-    "typescript.suggest.enabled": false,
- 
-    "C_Cpp.autocomplete": "Disabled",
-    
-    "editor.suggest.showWords": false,
-    "editor.suggest.showSnippets": false,
-    "editor.suggest.showFunctions": false,
-    "editor.suggest.showVariables": false
+  "editor.suggest.showWords": false,
+  "editor.wordBasedSuggestions": false,
+  "editor.quickSuggestions": {
+    "other": false,
+    "comments": false,
+    "strings": false
+  },
+  "editor.suggestOnTriggerCharacters": false,
+  "editor.parameterHints.enabled": false,
+  "editor.hover.enabled": false,  // Opcional: desativa dicas ao passar o mouse
+  "editor.autoClosingBrackets": "never",  // Opcional: evita autocompletar colchetes
+  "editor.autoClosingQuotes": "never",    // Opcional: evita autocompletar aspas
+  "typescript.suggest.autoImports": false,  // Se usar TypeScript
+  "javascript.suggest.autoImports": false   // Se usar JavaScript
 }
