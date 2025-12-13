@@ -1,7 +1,10 @@
 {
 	"InstallScripts" : 
 	[
-		"C:/PROJETOS/C_C++/Particles/build/cmake_install.cmake"
+		"C:/Users/Joao/OneDrive/Desktop/Projetos/Particles/build/cmake_install.cmake",
+		"C:/Users/Joao/OneDrive/Desktop/Projetos/Particles/build/libs/glfw/cmake_install.cmake",
+		"C:/Users/Joao/OneDrive/Desktop/Projetos/Particles/build/libs/glfw/src/cmake_install.cmake",
+		"C:/Users/Joao/OneDrive/Desktop/Projetos/Particles/build/libs/glfw/docs/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

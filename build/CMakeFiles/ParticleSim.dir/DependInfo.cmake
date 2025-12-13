@@ -8,8 +8,8 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "C:/PROJETOS/C_C++/Particles/libs/glad/src/glad.c" "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.obj" "gcc" "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.obj.d"
-  "C:/PROJETOS/C_C++/Particles/sim_2d.cpp" "CMakeFiles/ParticleSim.dir/sim_2d.cpp.obj" "gcc" "CMakeFiles/ParticleSim.dir/sim_2d.cpp.obj.d"
+  "C:/Users/Joao/OneDrive/Desktop/Projetos/Particles/libs/glad/src/glad.c" "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.obj" "gcc" "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.obj.d"
+  "C:/Users/Joao/OneDrive/Desktop/Projetos/Particles/src/sim_2d.cpp" "CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.obj" "gcc" "CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.obj.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

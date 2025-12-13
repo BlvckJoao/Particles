@@ -155,16 +155,16 @@ int main() {
     glBindVertexArray(0);
 
     // Cria o sistema de partículas
+    // Note: ParticleSystem constructor is (left,right,top,bottom,timeStep,damp)
     ParticleSystem system(
-        Vec2(0, -9.8f),    // Gravidade
-        0.99f,             // Damping
-        Vec2(-WORLD_WIDTH/2, -WORLD_HEIGHT/2),  // Limite inferior
-        Vec2(WORLD_WIDTH/2, WORLD_HEIGHT/2),    // Limite superior
-        0.8f               // Restituição
+        -WORLD_WIDTH/2.0f, WORLD_WIDTH/2.0f,
+        -WORLD_HEIGHT/2.0f, WORLD_HEIGHT/2.0f,
+        0.016f, // time step
+        0.99f   // damping
     );
 
     // Adiciona partículas iniciais
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 2000; i++) {
         float x = (rand() % 100) * WORLD_WIDTH / 100.0f - WORLD_WIDTH/2;
         float y = (rand() % 100) * WORLD_HEIGHT / 100.0f - WORLD_HEIGHT/2;
         
@@ -172,11 +172,11 @@ int main() {
             Vec2(x, y), // Posição
             Vec2((rand() % 10 - 5), (rand() % 10 - 5)),   // Velocidade
             1.0f + (rand() % 100) / 50.0f,            // Massa
-            0.2f + (rand() % 100) / 200.0f,           // Raio
+            0.2f,           // Raio
             glm::vec3(
-                rand() % 100 / 100.0f,
-                rand() % 100 / 100.0f,
-                rand() % 100 / 100.0f
+                (rand() % 100) / 100.0f,
+                (rand() % 100) / 100.0f,
+                (rand() % 100) / 100.0f
             )
         );
         system.addParticle(p);
@@ -191,7 +191,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Atualiza a física
-        system.updateSystem(0.016f); // ~60 FPS
+        system.update(); // uses internal dt
         
         // Renderização das partículas
         glUseProgram(shaderProgram);
@@ -206,9 +206,10 @@ int main() {
         std::vector<glm::vec2> positions;
         std::vector<glm::vec3> colors;
         
-        for (const auto& p : system.particles) {
-            positions.push_back(glm::vec2(p.position.x, p.position.y));
-            colors.push_back(p.color);
+        // Extract positions and colors through the public API
+        for (const auto& p : system.getParticles()) {
+            positions.push_back(glm::vec2(p.getPosition().getX(), p.getPosition().getY()));
+            colors.push_back(p.getColor());
         }
         
         // Atualiza o buffer
@@ -217,9 +218,9 @@ int main() {
         
         // Desenha as partículas
         glBindVertexArray(VAO);
-        for (size_t i = 0; i < system.particles.size(); i++) {
+        for (size_t i = 0; i < positions.size(); i++) {
             glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, glm::value_ptr(colors[i]));
-            glDrawArrays(GL_POINTS, i, 1);
+            glDrawArrays(GL_POINTS, static_cast<int>(i), 1);
         }
         
         // Troca buffers e verifica eventos
