@@ -1,4 +1,3 @@
-#include "particle_phsx.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -6,6 +5,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <vector>
+
+#include "particle_phsx.hpp"
+#include "benchmark.hpp"
 
 #define MAX_PARTICLES 500
 #define DAMPING 0.99f
@@ -191,6 +193,41 @@ int main() {
         system.addParticle(p);
     }
 
+    //BENCHMARKS
+
+    double lastTime = glfwGetTime();
+    int frameCount = 0;
+    int totalFrames = 0;
+    double fpsTimer = 0.0;
+
+    std::cout << "\n=== BENCHMARKS ===" << std::endl;
+
+    // Benchmark da atualização física
+    benchmarkTime("Update do sistema", [&]() {
+        system.update();
+    });
+
+    // Benchmark da preparação de dados
+    benchmarkTime("Preparação de posições/cores", [&]() {
+        std::vector<glm::vec2> positions;
+        std::vector<glm::vec3> colors;
+        
+        for (const auto& p : system.getParticles()) {
+            positions.push_back(glm::vec2(p.getPosition().getX(), p.getPosition().getY()));
+            colors.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+        }
+    });
+
+    // Benchmark da renderização
+    benchmarkTime("Renderização", [&]() {
+        glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(shaderProgram);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_POINTS, 0, MAX_PARTICLES);
+    });
+
+    std::cout << "=================\n" << std::endl;
+
     // Loop principal
     while (!glfwWindowShouldClose(window)) {
         // Input
@@ -262,11 +299,27 @@ int main() {
             glUniform1f(pointSizeLoc, sizePx);
             glDrawArrays(GL_POINTS, static_cast<int>(i), 1);
         }
+
+        double currentTime = glfwGetTime();
+        double delta = currentTime - lastTime;
+        lastTime = currentTime;
+        fpsTimer += delta;
+        frameCount++;
+        totalFrames++;
+
+        if (fpsTimer >= 1.0) {
+            std::cout << "\rFPS: " << frameCount << std::flush;
+            frameCount = 0;
+            fpsTimer = 0.0;
+        }
         
         // Troca buffers e verifica eventos
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    std::cout << "\nTotal frames renderizados: " << totalFrames << std::endl;
+    std::cout << "Tempo total de execução: " << glfwGetTime() << " segundos" << std::endl;
+    std::cout << "FPS médio: " << (totalFrames / glfwGetTime()) << std::endl;
 
     // Limpeza
     glDeleteVertexArrays(1, &VAO);

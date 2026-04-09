@@ -74,6 +74,7 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
   /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/libs/glad/include/KHR/khrplatform.h \
   /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/libs/glad/include/glad/glad.h \
   /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/libs/glfw/include/GLFW/glfw3.h \
+  /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/src/benchmark.hpp \
   /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/src/particle_phsx.hpp \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
@@ -91,6 +92,7 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
   /usr/include/c++/13/bits/basic_string.tcc \
   /usr/include/c++/13/bits/char_traits.h \
   /usr/include/c++/13/bits/charconv.h \
+  /usr/include/c++/13/bits/chrono.h \
   /usr/include/c++/13/bits/concept_check.h \
   /usr/include/c++/13/bits/cpp_type_traits.h \
   /usr/include/c++/13/bits/cxxabi_forced.h \
@@ -116,6 +118,7 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
   /usr/include/c++/13/bits/new_allocator.h \
   /usr/include/c++/13/bits/ostream.tcc \
   /usr/include/c++/13/bits/ostream_insert.h \
+  /usr/include/c++/13/bits/parse_numbers.h \
   /usr/include/c++/13/bits/postypes.h \
   /usr/include/c++/13/bits/predefined_ops.h \
   /usr/include/c++/13/bits/ptr_traits.h \
@@ -150,6 +153,7 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
   /usr/include/c++/13/cctype \
   /usr/include/c++/13/cerrno \
   /usr/include/c++/13/cfloat \
+  /usr/include/c++/13/chrono \
   /usr/include/c++/13/climits \
   /usr/include/c++/13/clocale \
   /usr/include/c++/13/cmath \
@@ -158,6 +162,7 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
   /usr/include/c++/13/cstdio \
   /usr/include/c++/13/cstdlib \
   /usr/include/c++/13/cstring \
+  /usr/include/c++/13/ctime \
   /usr/include/c++/13/cwchar \
   /usr/include/c++/13/cwctype \
   /usr/include/c++/13/debug/assertions.h \
@@ -179,6 +184,7 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
   /usr/include/c++/13/pstl/execution_defs.h \
   /usr/include/c++/13/pstl/glue_algorithm_defs.h \
   /usr/include/c++/13/pstl/pstl_config.h \
+  /usr/include/c++/13/ratio \
   /usr/include/c++/13/stdexcept \
   /usr/include/c++/13/streambuf \
   /usr/include/c++/13/string \
@@ -545,8 +551,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/time.h:
 
-/usr/include/linux/limits.h:
-
 /usr/include/glm/vec3.hpp:
 
 /usr/include/glm/vec2.hpp:
@@ -717,11 +721,25 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/glm/ext/matrix_double3x4_precision.hpp:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
+/usr/include/glm/ext/matrix_double3x4.hpp:
 
-/usr/include/asm-generic/errno.h:
+/usr/include/glm/ext/matrix_double3x3_precision.hpp:
 
-/usr/include/c++/13/bits/stl_heap.h:
+/usr/include/x86_64-linux-gnu/bits/local_lim.h:
+
+/usr/include/glm/ext/matrix_double3x3.hpp:
+
+/usr/include/glm/ext/matrix_double3x2_precision.hpp:
+
+/usr/include/glm/ext/matrix_double4x3.hpp:
+
+/usr/include/glm/ext/matrix_double3x2.hpp:
+
+/usr/include/glm/vec4.hpp:
+
+/usr/include/glm/ext/quaternion_relational.hpp:
+
+/usr/include/glm/ext/matrix_double2x4_precision.hpp:
 
 /usr/include/c++/13/bits/stl_algobase.h:
 
@@ -743,9 +761,13 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/c++/13/bits/postypes.h:
 
+/usr/include/c++/13/bits/uses_allocator.h:
+
 /usr/include/c++/13/bits/std_abs.h:
 
-/usr/include/c++/13/bits/uses_allocator.h:
+/usr/include/c++/13/bits/parse_numbers.h:
+
+/usr/include/glm/detail/type_vec1.inl:
 
 /usr/include/c++/13/bits/ostream_insert.h:
 
@@ -793,6 +815,10 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/glm/detail/func_geometric.inl:
 
+/usr/include/glm/ext/vector_uint4_sized.hpp:
+
+/usr/include/glm/detail/type_mat3x3.inl:
+
 /usr/include/glm/detail/type_vec3.inl:
 
 /usr/include/c++/13/bits/allocator.h:
@@ -802,8 +828,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 /usr/include/c++/13/bits/alloc_traits.h:
 
 /usr/include/c++/13/bits/concept_check.h:
-
-/usr/include/glm/ext/matrix_double3x3_precision.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h:
 
@@ -831,11 +855,19 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/assert.h:
 
+/usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
+
+/usr/include/asm-generic/errno.h:
+
 /usr/include/c++/13/bits/hash_bytes.h:
 
 /usr/include/c++/13/bits/stl_iterator_base_funcs.h:
 
 /usr/include/asm-generic/errno-base.h:
+
+/home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/src/benchmark.hpp:
+
+/usr/include/c++/13/bits/cxxabi_forced.h:
 
 /usr/include/c++/13/bits/stl_algo.h:
 
@@ -869,8 +901,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/c++/13/pstl/pstl_config.h:
 
-/usr/include/c++/13/bits/cxxabi_forced.h:
-
 /usr/include/c++/13/bits/functional_hash.h:
 
 /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/libs/glad/include/KHR/khrplatform.h:
@@ -890,6 +920,8 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 /usr/include/x86_64-linux-gnu/bits/time.h:
 
 /usr/include/x86_64-linux-gnu/bits/select.h:
+
+/usr/include/c++/13/bits/chrono.h:
 
 /usr/include/x86_64-linux-gnu/bits/endianness.h:
 
@@ -915,6 +947,10 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/c++/13/bits/functexcept.h:
 
+/usr/include/glm/ext/matrix_clip_space.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
+
 /usr/include/x86_64-linux-gnu/bits/dlfcn.h:
 
 /usr/include/glm/ext/vector_bool4_precision.hpp:
@@ -932,12 +968,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/linux/src/particle_phsx.hpp:
 
 /usr/include/c++/13/pstl/execution_defs.h:
-
-/usr/include/glm/vec4.hpp:
-
-/usr/include/glm/ext/quaternion_relational.hpp:
-
-/usr/include/glm/ext/matrix_double2x4_precision.hpp:
 
 /usr/include/glm/detail/compute_common.hpp:
 
@@ -1101,6 +1131,8 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/c++/13/tr1/modified_bessel_func.tcc:
 
+/usr/include/c++/13/bits/stl_heap.h:
+
 /usr/include/stdio.h:
 
 /usr/include/c++/13/bits/stl_iterator_base_types.h:
@@ -1151,6 +1183,8 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/c++/13/tr1/gamma.tcc:
 
+/usr/include/c++/13/chrono:
+
 /usr/include/glm/ext/matrix_double2x4.hpp:
 
 /usr/include/c++/13/climits:
@@ -1173,6 +1207,8 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/c++/13/cstdlib:
 
+/usr/include/c++/13/ctime:
+
 /usr/include/x86_64-linux-gnu/sys/select.h:
 
 /usr/include/c++/13/cwchar:
@@ -1180,6 +1216,10 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 /usr/include/glm/ext/vector_double2_precision.hpp:
 
 /usr/include/c++/13/cwctype:
+
+/usr/include/linux/limits.h:
+
+/usr/include/c++/13/ratio:
 
 /usr/include/glm/ext/vector_float3_precision.hpp:
 
@@ -1204,10 +1244,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 /usr/include/c++/13/ios:
 
 /usr/include/c++/13/iostream:
-
-/usr/include/x86_64-linux-gnu/bits/local_lim.h:
-
-/usr/include/glm/ext/matrix_double3x3.hpp:
 
 /usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
 
@@ -1303,10 +1339,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/glm/detail/type_mat3x3.hpp:
 
-/usr/include/glm/ext/vector_uint4_sized.hpp:
-
-/usr/include/glm/detail/type_mat3x3.inl:
-
 /usr/include/glm/detail/type_mat3x4.hpp:
 
 /usr/include/glm/detail/type_mat4x2.hpp:
@@ -1345,12 +1377,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/glm/detail/type_vec4.inl:
 
-/usr/include/glm/detail/type_vec1.inl:
-
-/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/glm/ext/matrix_clip_space.hpp:
-
 /usr/include/glm/detail/type_mat2x3.inl:
 
 /usr/include/c++/13/bits/memoryfwd.h:
@@ -1359,14 +1385,6 @@ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o: /home/joao-pedro/Área\ de\ trabalh
 
 /usr/include/glm/ext/matrix_double2x2_precision.hpp:
 
-/usr/include/glm/ext/matrix_double3x2_precision.hpp:
-
 /usr/include/x86_64-linux-gnu/bits/xopen_lim.h:
 
 /usr/include/glm/detail/type_vec2.inl:
-
-/usr/include/glm/ext/matrix_double4x3.hpp:
-
-/usr/include/glm/ext/matrix_double3x2.hpp:
-
-/usr/include/glm/ext/matrix_double3x4.hpp:
