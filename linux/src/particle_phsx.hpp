@@ -129,14 +129,15 @@ class ParticleSystem {
 
         std::vector<Particle> particles;
         world_boundary bounds;
+        size_t blockSize;
         float damping;
         float collision_damping;
         float dt;
 
     public:
 
-        ParticleSystem(float left, float right, float top, float bottom, float timeStep, float damp, float collision_damp = 0.85f) :
-            bounds{ left, right, top, bottom }, damping(damp), dt(timeStep), collision_damping(collision_damp) {}
+        ParticleSystem(float left, float right, float top, float bottom, size_t blockSize, float timeStep, float damp, float collision_damp = 0.85f) :
+            bounds{ left, right, top, bottom }, blockSize(blockSize), damping(damp), dt(timeStep), collision_damping(collision_damp) {}
 
         const std::vector<Particle>& getParticles() const {
            return particles;
@@ -179,12 +180,11 @@ class ParticleSystem {
         }
 
 
-        void handleCollisions() {
+        void handleCollisionsSeq() {
             const size_t count = particles.size();
 
             for (size_t i = 0; i < count; ++i) {
                 if (!particles[i].isActive()) continue;
-
                 for (size_t j = i + 1; j < count; ++j) {
                     if (!particles[j].isActive()) continue;
 
@@ -257,6 +257,91 @@ class ParticleSystem {
             }
         }
 
+        void handleCollision(Particle& p1, Particle& p2) {
+            Vec2 pos_i = p1.getPosition();
+            Vec2 pos_j = p2.getPosition();
+
+            float ri = p1.getRadius();
+            float rj = p2.getRadius();
+            float rsum = ri + rj;
+
+            Vec2 delta = pos_j - pos_i;
+            float dist = delta.length();
+
+            if (dist <= 0.0f || dist >= rsum)
+                return;
+
+            // Normal de colisão
+            Vec2 n = delta / dist;
+
+            // Penetração
+            float penetration = rsum - dist;
+
+            // Massas
+            float mi = p1.getMass();
+            float mj = p2.getMass();
+            float sum = mi + mj;
+
+            // Pesos (quebram simetria numérica)
+            float wi = mj / sum;
+            float wj = mi / sum;
+
+            // Correção posicional
+            Vec2 correction = n * penetration;
+
+            Vec2 newPosI = pos_i - correction * wi;
+            Vec2 newPosJ = pos_j + correction * wj;
+
+            p1.setPosition(newPosI);
+            p2.setPosition(newPosJ);
+
+            // --- ajuste de "velocidade" via prev_position ---
+            Vec2 prev_i = p1.getPrevPosition();
+            Vec2 prev_j = p2.getPrevPosition();
+
+            Vec2 vel_i = (pos_i - prev_i) / dt;
+            Vec2 vel_j = (pos_j - prev_j) / dt;
+
+            // componente normal
+            float vi_n = vel_i.getX() * n.getX() + vel_i.getY() * n.getY();
+            float vj_n = vel_j.getX() * n.getX() + vel_j.getY() * n.getY();
+
+            float rel = vi_n - vj_n;
+
+            if (rel < 0.0f) {
+                float e = collision_damping;
+
+                float vi_n_new = -vi_n * e;
+                float vj_n_new = -vj_n * e;
+
+                Vec2 vel_i_new = vel_i + n * (vi_n_new - vi_n);
+                Vec2 vel_j_new = vel_j + n * (vj_n_new - vj_n);
+
+                p1.setPrevPosition(newPosI - vel_i_new * dt);
+                p2.setPrevPosition(newPosJ - vel_j_new * dt);
+            } else {
+                p1.setPrevPosition(newPosI - vel_i * dt);
+                p2.setPrevPosition(newPosJ - vel_j * dt);
+            }
+        }
+
+        void optmizedCollisionHandling() {
+            //cache blocking and checking only nearby particles would go here
+            const size_t count = particles.size();
+
+            for(size_t ii = 0; ii < count; ii += blockSize) {
+            for(size_t jj = ii + blockSize; jj < count; jj += blockSize) {
+                    for(size_t i = ii; i < std::min(ii + blockSize, count); ++i) {
+                        if (!particles[i].isActive()) continue;
+                    for(size_t j = jj; j < std::min(jj + blockSize, count); ++j) {
+                            if (!particles[j].isActive()) continue;
+                            handleCollision(particles[i], particles[j]);
+                        }
+                    }
+                }
+            }
+        }
+
         void applyGravity() {
             // Gravidade aponta para baixo (y negativo)
             Vec2 gravity(0.0f, -9.81f);
@@ -278,7 +363,7 @@ class ParticleSystem {
 
             const int solverIterations = 4;
             for (int k = 0; k < solverIterations; ++k)
-                handleCollisions();
+                optmizedCollisionHandling();
         }
 
         void clearInactiveParticles() {

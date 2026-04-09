@@ -7,6 +7,12 @@
 #include <iostream>
 #include <vector>
 
+#define MAX_PARTICLES 500
+#define DAMPING 0.99f
+#define TIME_STEP 0.016f
+#define COLISION_DAMPING 0.85f
+#define BLOCK_SIZE 4
+
 // Funções de callback
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -160,13 +166,14 @@ int main() {
     ParticleSystem system(
         -WORLD_WIDTH/2.0f, WORLD_WIDTH/2.0f,
         -WORLD_HEIGHT/2.0f, WORLD_HEIGHT/2.0f,
-        0.016f, 
-        0.99f,
-        1.0f // collision_damp (0.0 - no reaction, 1.0 - full reaction)
+        BLOCK_SIZE, // blockSize
+        TIME_STEP,  // timeStep
+        DAMPING,    // damping
+        COLISION_DAMPING // collision_damp (0.0 - no reaction, 1.0 - full reaction)
     );
 
     // Adiciona partículas iniciais
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < MAX_PARTICLES; i++) {
         float x = (rand() % 100) * WORLD_WIDTH / 100.0f - WORLD_WIDTH/2;
         float y = (rand() % 100) * WORLD_HEIGHT / 100.0f - WORLD_HEIGHT/2;
         
@@ -210,23 +217,23 @@ int main() {
         std::vector<glm::vec2> positions;
         std::vector<glm::vec3> colors;
         std::vector<float> radii;
-            std::vector<float> speeds;
+        std::vector<float> speeds;
 
             // Get simulation timestep from system
-            float simDt = system.getTimeStep();
+        float simDt = system.getTimeStep();
 
-            // Extract positions, radii and compute speeds through the public API
-            for (const auto& p : system.getParticles()) {
-                Vec2 pos = p.getPosition();
-                Vec2 prev = p.getPrevPosition();
-                positions.push_back(glm::vec2(pos.getX(), pos.getY()));
-                radii.push_back(p.getRadius());
+        // Extract positions, radii and compute speeds through the public API
+        for (const auto& p : system.getParticles()) {
+            Vec2 pos = p.getPosition();
+            Vec2 prev = p.getPrevPosition();
+            positions.push_back(glm::vec2(pos.getX(), pos.getY()));
+            radii.push_back(p.getRadius());
 
-                // velocity estimate from Verlet positions
-                Vec2 dv = (pos - prev) / simDt;
-                float sp = dv.length();
-                speeds.push_back(sp);
-            }
+            // velocity estimate from Verlet positions
+            Vec2 dv = (pos - prev) / simDt;
+            float sp = dv.length();
+            speeds.push_back(sp);
+        }
 
         // Determine a reasonable normalization for speed -> color mapping
         float maxSpeed = 0.0f;
