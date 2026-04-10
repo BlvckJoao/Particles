@@ -12,15 +12,15 @@
 // Ajuste aqui para mudar o comportamento geral sem tocar na física ou no render.
 // =============================================================================
 
-#define MAX_PARTICLES    2000
+#define MAX_PARTICLES    5000
 #define DAMPING          0.99f   // amortecimento global do integrador Verlet
 #define TIME_STEP        0.016f  // passo de tempo fixo (~60Hz)
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
 // Dimensões da janela e do mundo simulado
-const unsigned int SCR_WIDTH    = 800;
-const unsigned int SCR_HEIGHT   = 600;
+const unsigned int SCR_WIDTH    = 1280;
+const unsigned int SCR_HEIGHT   = 720;
 const float        WORLD_WIDTH  = 20.0f;
 const float        WORLD_HEIGHT = 15.0f;
 

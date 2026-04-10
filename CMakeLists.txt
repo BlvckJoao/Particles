@@ -27,6 +27,8 @@ set(SOURCES
     ${PROJECT_ROOT}/libs/glad/src/glad.c
 )
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
+
 add_executable(ParticleSim ${SOURCES})
 
 # Prefer bundled GLFW if present

@@ -13,5 +13,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I"/home/joao-pedro/Área de trabalho/Projetos/Particles/libs/glad/include" -I"/home/joao-pedro/Área de trabalho/Projetos/Particles/libs/glfw/include" -I"/home/joao-pedro/Área de trabalho/Projetos/Particles/libs/glm" -I"/home/joao-pedro/Área de trabalho/Projetos/Particles/src"
 
-CXX_FLAGS = -std=c++17
+CXX_FLAGS =  -O3 -march=native -std=c++17
 

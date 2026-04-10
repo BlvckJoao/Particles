@@ -145,9 +145,23 @@ void Renderer::draw(const std::vector<Particle>& particles, float dt) {
 
         std::vector<glm::vec3> colors;
         colors.reserve(speeds.size());
+
         for (float s : speeds) {
                 float t = glm::clamp(s / speedScale, 0.0f, 1.0f);
-                colors.push_back(glm::vec3(t, 0.0f, 1.0f - t));
+
+                glm::vec3 color;
+                if (t < 0.33f) {
+                        float u = t / 0.33f;
+                        color = glm::vec3(0.0f, u, 1.0f);
+                } else if (t < 0.66f) {
+                        float u = (t - 0.33f) / 0.33f;
+                        color = glm::vec3(u, 1.0f, 1.0f - u);
+                } else {
+                        float u = (t - 0.66f) / 0.34f;
+                        color = glm::vec3(1.0f, 1.0f - u, 0.0f);
+                }
+
+                colors.push_back(color);
         }
 
         // Envia todas as posições para a GPU de uma vez (GL_DYNAMIC_DRAW pois muda todo frame)
