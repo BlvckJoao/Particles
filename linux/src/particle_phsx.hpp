@@ -167,6 +167,18 @@ struct SpatialGrid {
             out.insert(out.end(), cell.begin(), cell.end());
         }
     }
+
+    int getCellDensity(int cx, int cy) const {
+        if (cx < 0 || cx >= cols || cy < 0 || cy >= rows) return 0;
+        return (int)cells[cy * cols + cx].size();
+    }
+
+    int getMaxDensity() const {
+        int maxD = 0;
+        for (const auto& cell : cells)
+            maxD = std::max(maxD, (int)cell.size());
+        return maxD;
+    }
 };
 
 class ParticleSystem {
@@ -460,15 +472,79 @@ class ParticleSystem {
         void update() {
             applyGravity();
 
-            updateSleepState();
             for (auto& p : particles)
                 p.verletIntegration(dt, damping);
 
             handleWorldBoundaries();
 
-            const int solverIterations = 4;
-            for (int k = 0; k < solverIterations; ++k)
-                handleCollisionsSpatialGrid();
+            // Monta grid uma vez fora do solver
+            float maxRadius = 0.0f;
+            for (const auto& p : particles)
+                maxRadius = std::max(maxRadius, p.getRadius());
+
+            SpatialGrid grid;
+            grid.build(particles, bounds.left, bounds.top,
+                    bounds.right, bounds.bottom, 2.0f * maxRadius);
+
+            int maxDensity = grid.getMaxDensity();
+
+            const int maxIterations = 4;
+            const int minIterations = 1;
+            const int densityThreshold = 8; // acima disso começa a reduzir
+
+            for (size_t ii = 0; ii < particles.size(); ii += blockSize) {
+                size_t iEnd = std::min(ii + blockSize, particles.size());
+
+                // Calcula densidade média do bloco
+                int blockDensity = 0;
+                int activeInBlock = 0;
+                for (size_t i = ii; i < iEnd; ++i) {
+                    if (!particles[i].isActive()) continue;
+                    int cx = grid.cellCol(particles[i].getPosition().getX());
+                    int cy = grid.cellRow(particles[i].getPosition().getY());
+                    blockDensity += grid.getCellDensity(cx, cy);
+                    activeInBlock++;
+                }
+
+                if (activeInBlock == 0) continue;
+                blockDensity /= activeInBlock;
+
+                // Escala iterações inversamente à densidade
+                int iterations = maxIterations;
+                if (blockDensity > densityThreshold) {
+                    float densityRatio = (float)densityThreshold / (float)blockDensity;
+                    iterations = std::max(minIterations,
+                                        (int)std::round(maxIterations * densityRatio));
+                }
+
+                // Roda o solver com iterações adaptativas pra esse bloco
+                std::vector<size_t> neighbors;
+                for (int k = 0; k < iterations; ++k) {
+                    neighbors.clear();
+                    for (size_t i = ii; i < iEnd; ++i) {
+                        if (!particles[i].isActive()) continue;
+                        int cx = grid.cellCol(particles[i].getPosition().getX());
+                        int cy = grid.cellRow(particles[i].getPosition().getY());
+                        grid.getNeighbors(cx, cy, neighbors);
+                    }
+
+                    std::sort(neighbors.begin(), neighbors.end());
+                    neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
+
+                    for (size_t jj = 0; jj < neighbors.size(); jj += blockSize) {
+                        size_t jEnd = std::min(jj + blockSize, neighbors.size());
+                        for (size_t i = ii; i < iEnd; ++i) {
+                            if (!particles[i].isActive()) continue;
+                        for (size_t jIdx = jj; jIdx < jEnd; ++jIdx) {
+                                size_t j = neighbors[jIdx];
+                                if (j <= i) continue;
+                                if (!particles[j].isActive()) continue;
+                                handleCollision(particles[i], particles[j]);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         void clearInactiveParticles() {
