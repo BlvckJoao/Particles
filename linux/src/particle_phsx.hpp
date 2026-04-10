@@ -48,6 +48,7 @@ struct Particle{
         float radius;
         glm::vec3 color;
         bool is_active;
+        bool is_sleeping;
 
     public:
 
@@ -62,7 +63,8 @@ struct Particle{
             mass(std::max(1e-6f, m)),
             radius(rad),
             color(col),
-            is_active(true) {}
+            is_active(true),
+            is_sleeping(false) {}
 
         void applyForce(const Vec2& f) { forceAccumulator += f; }
         void clearForces() { forceAccumulator.clear(); }
@@ -81,6 +83,9 @@ struct Particle{
 
         bool isActive() const noexcept { return is_active; }
         void deactivate(bool p) noexcept { is_active = !p; }
+
+        bool isSleeping() const noexcept { return is_sleeping; }
+        void setSleeping(bool s) noexcept { is_sleeping = s; }
 
         void verletIntegration(float dt, float damping = 0.999f){
             if(!is_active){
@@ -121,6 +126,49 @@ struct Particle{
         }
 };
 
+struct SpatialGrid {
+    float cellSize;
+    int cols, rows;
+    float left, top;
+    std::vector<std::vector<size_t>> cells;
+
+    void build(const std::vector<Particle>& particles, float left, float top,
+               float right, float bottom, float cs) {
+        cellSize = cs;
+        cols = std::max(1, (int)std::ceil((right - left) / cellSize));
+        rows = std::max(1, (int)std::ceil((bottom - top) / cellSize));
+        this->left = left;
+        this->top  = top;
+
+        cells.assign(cols * rows, {});
+
+        for (size_t i = 0; i < particles.size(); ++i) {
+            if (!particles[i].isActive()) continue;
+            int cx = cellCol(particles[i].getPosition().getX());
+            int cy = cellRow(particles[i].getPosition().getY());
+            cells[cy * cols + cx].push_back(i);
+        }
+    }
+
+    int cellCol(float x) const {
+        return std::clamp((int)((x - left) / cellSize), 0, cols - 1);
+    }
+    int cellRow(float y) const {
+        return std::clamp((int)((y - top) / cellSize), 0, rows - 1);
+    }
+
+    // Retorna índices das partículas nas 9 células ao redor de (cx, cy)
+    void getNeighbors(int cx, int cy, std::vector<size_t>& out) const {
+        for (int dy = -1; dy <= 1; ++dy)
+        for (int dx = -1; dx <= 1; ++dx) {
+            int nx = cx + dx, ny = cy + dy;
+            if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+            const auto& cell = cells[ny * cols + nx];
+            out.insert(out.end(), cell.begin(), cell.end());
+        }
+    }
+};
+
 class ParticleSystem {
     private:
         typedef struct {
@@ -143,8 +191,8 @@ class ParticleSystem {
            return particles;
         }
 
-          // Expose timestep so render can compute per-particle velocities
-          float getTimeStep() const { return dt; }
+        // Expose timestep so render can compute per-particle velocities
+        float getTimeStep() const { return dt; }
 
         float distance(const Vec2& a, const Vec2& b) const {
             float dx = a.getX() - b.getX();
@@ -342,6 +390,51 @@ class ParticleSystem {
             }
         }
 
+        void handleCollisionsSpatialGrid() {
+
+            float maxRadius = 0.0f;
+            for (const auto& p : particles)
+                maxRadius = std::max(maxRadius, p.getRadius());
+
+            SpatialGrid grid;
+            grid.build(particles, bounds.left, bounds.top,
+                    bounds.right, bounds.bottom, 2.0f * maxRadius);
+
+            const size_t count = particles.size();
+
+            for (size_t ii = 0; ii < count; ii += blockSize) {
+                size_t iEnd = std::min(ii + blockSize, count);
+
+                // Coleta células vizinhas de todas as partículas do bloco i
+                std::vector<size_t> neighbors;
+                for (size_t i = ii; i < iEnd; ++i) {
+                    if (!particles[i].isActive()) continue;
+                    int cx = grid.cellCol(particles[i].getPosition().getX());
+                    int cy = grid.cellRow(particles[i].getPosition().getY());
+                    grid.getNeighbors(cx, cy, neighbors);
+                }
+
+                // Remove duplicatas dos vizinhos coletados
+                std::sort(neighbors.begin(), neighbors.end());
+                neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
+
+                // Cache blocking sobre os vizinhos
+                for (size_t jj = 0; jj < neighbors.size(); jj += blockSize) {
+                    size_t jEnd = std::min(jj + blockSize, neighbors.size());
+
+                    for (size_t i = ii; i < iEnd; ++i) {
+                        if (!particles[i].isActive()) continue;
+                    for (size_t jIdx = jj; jIdx < jEnd; ++jIdx) {
+                            size_t j = neighbors[jIdx];
+                            if (j <= i) continue;
+                            if (!particles[j].isActive()) continue;
+                            handleCollision(particles[i], particles[j]);
+                        }
+                    }
+                }
+            }
+        }
+
         void applyGravity() {
             // Gravidade aponta para baixo (y negativo)
             Vec2 gravity(0.0f, -9.81f);
@@ -353,9 +446,21 @@ class ParticleSystem {
 
         }
 
+        void updateSleepState(float sleepThreshold = 0.001f) {
+            for (auto& p : particles) {
+                if (!p.isActive()) continue;
+                Vec2 vel = (p.getPosition() - p.getPrevPosition()) / dt;
+                if (vel.length() < sleepThreshold)
+                    p.setSleeping(true);
+                else
+                    p.setSleeping(false);
+            }
+        }
+
         void update() {
             applyGravity();
 
+            updateSleepState();
             for (auto& p : particles)
                 p.verletIntegration(dt, damping);
 
@@ -363,7 +468,7 @@ class ParticleSystem {
 
             const int solverIterations = 4;
             for (int k = 0; k < solverIterations; ++k)
-                optmizedCollisionHandling();
+                handleCollisionsSpatialGrid();
         }
 
         void clearInactiveParticles() {
@@ -374,4 +479,5 @@ class ParticleSystem {
             );
         }
     };
+
 #endif

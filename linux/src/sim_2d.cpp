@@ -9,11 +9,11 @@
 #include "particle_phsx.hpp"
 #include "benchmark.hpp"
 
-#define MAX_PARTICLES 500
+#define MAX_PARTICLES 2000
 #define DAMPING 0.99f
 #define TIME_STEP 0.016f
 #define COLISION_DAMPING 0.85f
-#define BLOCK_SIZE 4
+#define BLOCK_SIZE 64
 
 // Funções de callback
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -62,7 +62,12 @@ unsigned int shaderProgram;
 unsigned int VAO, VBO;
 glm::mat4 projection;
 
-int main() {
+int main(int argc, char** argv) {
+    if(argc != 2) {
+        std::cout << "Uso: " << argv[0] << std::endl;
+        return 0;
+    }
+    size_t numParticles = std::min(static_cast<size_t>(MAX_PARTICLES), static_cast<size_t>(std::atoi(argv[1])));
     // Inicialização GLFW
     if (!glfwInit()) {
         std::cerr << "Falha ao inicializar GLFW" << std::endl;
@@ -175,7 +180,7 @@ int main() {
     );
 
     // Adiciona partículas iniciais
-    for (int i = 0; i < MAX_PARTICLES; i++) {
+    for (int i = 0; i < numParticles; i++) {
         float x = (rand() % 100) * WORLD_WIDTH / 100.0f - WORLD_WIDTH/2;
         float y = (rand() % 100) * WORLD_HEIGHT / 100.0f - WORLD_HEIGHT/2;
         
