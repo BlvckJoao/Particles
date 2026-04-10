@@ -21,7 +21,9 @@ include_directories(
 
 # Sources
 set(SOURCES
-    ${PROJECT_ROOT}/src/sim_2d.cpp
+    ${PROJECT_ROOT}/src/main.cpp
+    ${PROJECT_ROOT}/src/physics/particle_system.cpp
+    ${PROJECT_ROOT}/src/render/renderer.cpp
     ${PROJECT_ROOT}/libs/glad/src/glad.c
 )
 
@@ -61,7 +63,7 @@ endif()
 target_include_directories(ParticleSim PRIVATE
     ${PROJECT_ROOT}/libs/glad/include
     ${PROJECT_ROOT}/libs/glfw/include
-    ${PROJECT_ROOT}/libs/glm
+    /usr/include
     ${PROJECT_ROOT}/src
 )
 
@@ -70,6 +72,6 @@ set_target_properties(ParticleSim PROPERTIES
 )
 
 # Quick check for GLM header
-if(NOT EXISTS "${PROJECT_ROOT}/libs/glm/glm/glm.hpp")
-    message(FATAL_ERROR "Arquivo glm.hpp não encontrado! Caminho esperado: ${PROJECT_ROOT}/libs/glm/glm/glm.hpp")
+if(NOT EXISTS "/usr/include/glm/glm.hpp")
+    message(FATAL_ERROR "Arquivo glm.hpp não encontrado! Instale com: sudo apt-get install libglm-dev")
 endif()

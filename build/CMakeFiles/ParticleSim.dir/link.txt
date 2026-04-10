@@ -1,3 +1,1 @@
-"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\ParticleSim.dir/objects.a
-C:\msys64\ucrt64\bin\ar.exe qc CMakeFiles\ParticleSim.dir/objects.a @CMakeFiles\ParticleSim.dir\objects1.rsp
-C:\msys64\ucrt64\bin\c++.exe -Wl,--whole-archive CMakeFiles\ParticleSim.dir/objects.a -Wl,--no-whole-archive -o bin\ParticleSim.exe -Wl,--out-implib,libParticleSim.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\ParticleSim.dir\linkLibs.rsp
+/usr/bin/c++ CMakeFiles/ParticleSim.dir/src/main.cpp.o CMakeFiles/ParticleSim.dir/src/physics/particle_system.cpp.o CMakeFiles/ParticleSim.dir/src/render/renderer.cpp.o CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.o -o bin/ParticleSim  libs/glfw/src/libglfw3.a /usr/lib/x86_64-linux-gnu/libGL.so /usr/lib/x86_64-linux-gnu/librt.a -lm -ldl 

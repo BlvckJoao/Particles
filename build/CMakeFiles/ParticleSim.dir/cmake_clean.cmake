@@ -1,12 +1,14 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.obj"
-  "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.obj.d"
-  "CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.obj"
-  "CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.obj.d"
-  "bin/ParticleSim.exe"
-  "bin/ParticleSim.exe.manifest"
+  "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.o"
+  "CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.o.d"
+  "CMakeFiles/ParticleSim.dir/src/main.cpp.o"
+  "CMakeFiles/ParticleSim.dir/src/main.cpp.o.d"
+  "CMakeFiles/ParticleSim.dir/src/physics/particle_system.cpp.o"
+  "CMakeFiles/ParticleSim.dir/src/physics/particle_system.cpp.o.d"
+  "CMakeFiles/ParticleSim.dir/src/render/renderer.cpp.o"
+  "CMakeFiles/ParticleSim.dir/src/render/renderer.cpp.o.d"
+  "bin/ParticleSim"
   "bin/ParticleSim.pdb"
-  "libParticleSim.dll.a"
 )
 
 # Per-language clean rules from dependency scanning.

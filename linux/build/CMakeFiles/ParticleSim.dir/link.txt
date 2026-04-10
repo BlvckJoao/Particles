@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/ParticleSim.dir/src/sim_2d.cpp.o CMakeFiles/ParticleSim.dir/libs/glad/src/glad.c.o -o bin/ParticleSim  libs/glfw/src/libglfw3.a /usr/lib/x86_64-linux-gnu/libGL.so /usr/lib/x86_64-linux-gnu/librt.a -lm -ldl 
