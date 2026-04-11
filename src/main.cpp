@@ -62,7 +62,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 glfwGetCursorPos(window, &mouse.x, &mouse.y);
                 glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
 
-                float pickRadius   = 0.5f;
+                float pickRadius   = 2.5f;
                 float minDist      = pickRadius;
                 mouse.heldParticle = -1;
 
