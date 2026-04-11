@@ -20,6 +20,7 @@
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
+#define RAY_LENGTH       0.1f    // comprimento do "raio" para detecção de clique em partículas
 
 // =============================================================================
 // main
@@ -73,6 +74,7 @@ int main(int argc, char** argv) {
         // Inicialização do renderer (compila shaders, aloca VAO/VBO)
         // -------------------------------------------------------------------------
         Renderer renderer(SCR_WIDTH, SCR_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT);
+        Benchmark benchmark;
         renderer.init();
 
         // -------------------------------------------------------------------------
@@ -106,7 +108,7 @@ int main(int argc, char** argv) {
                         Vec2(x, y),
                         Vec2(dist_vel(gen), dist_vel(gen)),
                         dist_mass(gen),
-                        0.05f,  // raio
+                        RAY_LENGTH,  // raio
                         glm::vec3(
                                 dist_color(gen),
                                 dist_color(gen),
@@ -147,10 +149,7 @@ int main(int argc, char** argv) {
         // -------------------------------------------------------------------------
         // Loop principal
         // -------------------------------------------------------------------------
-        double lastTime    = glfwGetTime();
-        double startTime   = lastTime;
-        double fpsTimer    = 0.0;
-        int    frameCount  = 0;
+        double startTime   = glfwGetTime();
         int    totalFrames = 0;
 
         while (!glfwWindowShouldClose(window)) {
@@ -167,19 +166,11 @@ int main(int argc, char** argv) {
                 glfwSwapBuffers(window);
                 glfwPollEvents();
 
-                // Contador de FPS: imprime no terminal a cada 1 segundo
-                double now   = glfwGetTime();
-                double delta = now - lastTime;
-                lastTime     = now;
-                fpsTimer    += delta;
-                frameCount++;
-                totalFrames++;
+                // Atualiza estatísticas de FPS e CPU
+                benchmark.tick();
+                benchmark.report("Simulação");
 
-                if (fpsTimer >= 1.0) {
-                        std::cout << "\rFPS: " << frameCount << "   " << std::flush;
-                        frameCount = 0;
-                        fpsTimer   = 0.0;
-                }
+                totalFrames++;
         }
 
         // Estatísticas finais
