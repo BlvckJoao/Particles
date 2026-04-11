@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cstdlib>
+#include <random>
 
 #include "physics/particle_system.hpp"
 #include "render/renderer.hpp"
@@ -87,20 +88,29 @@ int main(int argc, char** argv) {
                 COLISION_DAMPING
         );
 
+        // Gerador de números aleatórios de alta qualidade
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dist_pos_x(-WORLD_WIDTH  / 2.0f, WORLD_WIDTH  / 2.0f);
+        std::uniform_real_distribution<float> dist_pos_y(-WORLD_HEIGHT / 2.0f, WORLD_HEIGHT / 2.0f);
+        std::uniform_real_distribution<float> dist_vel(-5.0f, 5.0f);
+        std::uniform_real_distribution<float> dist_mass(1.0f, 3.0f);
+        std::uniform_real_distribution<float> dist_color(0.0f, 1.0f);
+
         // Popula com partículas em posições e velocidades aleatórias
         for (size_t i = 0; i < numParticles; ++i) {
-                float x = (rand() % 100) * WORLD_WIDTH  / 100.0f - WORLD_WIDTH  / 2.0f;
-                float y = (rand() % 100) * WORLD_HEIGHT / 100.0f - WORLD_HEIGHT / 2.0f;
+                float x = dist_pos_x(gen);
+                float y = dist_pos_y(gen);
 
                 Particle p(
                         Vec2(x, y),
-                        Vec2(rand() % 10 - 5, rand() % 10 - 5),
-                        1.0f + (rand() % 100) / 50.0f,
-                        0.1f,  //raio
+                        Vec2(dist_vel(gen), dist_vel(gen)),
+                        dist_mass(gen),
+                        0.05f,  // raio
                         glm::vec3(
-                                (rand() % 100) / 100.0f,
-                                (rand() % 100) / 100.0f,
-                                (rand() % 100) / 100.0f
+                                dist_color(gen),
+                                dist_color(gen),
+                                dist_color(gen)
                         )
                 );
                 system.addParticle(p);

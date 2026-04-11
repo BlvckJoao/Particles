@@ -83,6 +83,7 @@ CMakeFiles/ParticleSim.dir/src/main.cpp.o
  /home/joao-pedro/Área de trabalho/Projetos/Particles/src/render/renderer.hpp
  /home/joao-pedro/Área de trabalho/Projetos/Particles/src/spatial/spacial_grid.hpp
  /home/joao-pedro/Área de trabalho/Projetos/Particles/src/utils/benchmark.hpp
+ /home/joao-pedro/Área de trabalho/Projetos/Particles/src/utils/mouse.hpp
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
  /usr/include/asm-generic/errno.h
