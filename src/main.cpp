@@ -21,7 +21,8 @@
 struct MouseState {
         double x, y;               // posição atual em pixels
         bool   holding = false;
-        int    heldParticle = -1;  // índice da partícula segurada (-1 = nenhuma)
+        std::vector<int> heldParticles;
+        std::vector<Vec2> offsets; // para manter a posição relativa ao clicar
 } mouse;
 
 // Dimensões da janela e do mundo simulado
@@ -53,6 +54,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
         glViewport(0, 0, width, height);
 }
 
+void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+        mouse.x = xpos;
+        mouse.y = ypos;
+}
+
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
         if (button != GLFW_MOUSE_BUTTON_LEFT) return;
 
@@ -62,27 +68,28 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 glfwGetCursorPos(window, &mouse.x, &mouse.y);
                 glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
 
-                float pickRadius   = 2.5f;
-                float minDist      = pickRadius;
-                mouse.heldParticle = -1;
+                float pickRadius = 1.0f;
+                mouse.heldParticles.clear();
+                mouse.offsets.clear();
 
                 const auto& particles = system->getParticles();
                 for (int i = 0; i < (int)particles.size(); ++i) {
                         float dx = particles[i].getPosition().getX() - worldPos.x;
                         float dy = particles[i].getPosition().getY() - worldPos.y;
                         float d  = std::sqrt(dx*dx + dy*dy);
-                        if (d < minDist) {
-                                minDist = d;
-                                mouse.heldParticle = i;
+                        if (d < pickRadius) {
+                                mouse.heldParticles.push_back(i);
+                                mouse.offsets.push_back(Vec2(dx, dy));
                         }
                 }
 
-                if (mouse.heldParticle != -1)
+                if (!mouse.heldParticles.empty())
                         mouse.holding = true;
 
         } else if (action == GLFW_RELEASE) {
-                mouse.holding      = false;
-                mouse.heldParticle = -1;
+                mouse.holding = false;
+                mouse.heldParticles.clear();
+                mouse.offsets.clear();
         }
 }
 
@@ -176,6 +183,7 @@ int main(int argc, char** argv) {
         glfwSetWindowUserPointer(window, &system);
         glfwSetMouseButtonCallback(window, mouse_button_callback);
         glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+        glfwSetCursorPosCallback(window, cursor_position_callback);
 
         // -------------------------------------------------------------------------
         // Benchmarks de inicialização (roda uma vez antes do loop principal)
@@ -213,17 +221,17 @@ int main(int argc, char** argv) {
 
                 glClear(GL_COLOR_BUFFER_BIT);
 
-                if (mouse.holding && mouse.heldParticle != -1) {
-                        glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
-                        Vec2 target(worldPos.x, worldPos.y);
-
-                        // Atualiza posição e prev para a mesma posição — velocidade zero
-                        // O Verlet vai manter ela parada enquanto você segura
-                        system.setParticlePosition(mouse.heldParticle, target);
-                }
-
                 // Passo de física
                 system.update();
+
+                if (mouse.holding) {
+                        glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
+                        for (size_t i = 0; i < mouse.heldParticles.size(); ++i) {
+                                Vec2 target(worldPos.x + mouse.offsets[i].getX(),
+                                        worldPos.y + mouse.offsets[i].getY());
+                                system.setParticlePosition(mouse.heldParticles[i], target);
+                        }
+                }
 
                 // Passo de renderização
                 renderer.draw(system.getParticles(), system.getTimeStep());
