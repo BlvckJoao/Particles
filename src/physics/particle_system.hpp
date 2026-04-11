@@ -25,9 +25,18 @@ class ParticleSystem {
         float collision_damping;
         float dt;
 
+        bool             mouseHolding = false;
+        Vec2             mouseTarget;
+        std::vector<int> heldParticles;
+        std::vector<Vec2> heldOffsets;
+
         void handleCollision(Particle& p1, Particle& p2);
 
     public:
+        void startHold(const std::vector<int>& indices, const std::vector<Vec2>& offsets, const Vec2& target);
+        void updateMouseTarget(const Vec2& target);
+        void applyMouseForce();
+        void releaseHold();
         ParticleSystem(float left, float right, float top, float bottom, size_t blockSize, float timeStep, float damp, float collision_damp = 0.85f);
 
         const std::vector<Particle>& getParticles() const;

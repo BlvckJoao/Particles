@@ -34,6 +34,45 @@ void ParticleSystem::addParticle(const Particle& p) {
     particles.push_back(p);
 }
 
+void ParticleSystem::startHold(const std::vector<int>& indices,
+                                const std::vector<Vec2>& offsets,
+                                const Vec2& target) {
+        heldParticles = indices;
+        heldOffsets   = offsets;
+        mouseTarget   = target;
+        mouseHolding  = true;
+}
+
+void ParticleSystem::updateMouseTarget(const Vec2& target) {
+        mouseTarget = target;
+}
+
+void ParticleSystem::releaseHold() {
+        mouseHolding = false;
+        heldParticles.clear();
+        heldOffsets.clear();
+}
+
+void ParticleSystem::applyMouseForce() {
+        if (!mouseHolding) return;
+
+        const float stiffness = 300.0f; // força de atração — aumenta pra mais rígido
+        const float damping   = 20.0f;  // amortece a oscilação
+
+        for (size_t i = 0; i < heldParticles.size(); ++i) {
+                int   idx    = heldParticles[i];
+                Vec2  target = mouseTarget + heldOffsets[i];
+                Vec2  pos    = particles[idx].getPosition();
+                Vec2  vel    = (pos - particles[idx].getPrevPosition()) / dt;
+
+                // Força mola: puxa em direção ao alvo
+                Vec2  diff  = target - pos;
+                Vec2  force = diff * stiffness - vel * damping;
+
+                particles[idx].applyForce(force);
+        }
+}
+
 void ParticleSystem::handleWorldBoundaries() {
     for (auto& p : particles) {
         Vec2  pos  = p.getPosition();
@@ -282,13 +321,14 @@ void ParticleSystem::updateSleepState(float sleepThreshold) {
 
 // Main update function
 void ParticleSystem::update() {
-    applyGravity();
+        applyGravity();
+        applyMouseForce(); // antes de integrar
 
-    for (auto& p : particles)
-        p.verletIntegration(dt, damping);
+        for (auto& p : particles)
+                p.verletIntegration(dt, damping);
 
-    handleWorldBoundaries();
-    handleCollisionsSpatialGrid(); // o método já itera internamente
+        handleWorldBoundaries();
+        handleCollisionsSpatialGrid();
 }
 
 void ParticleSystem::clearInactiveParticles() {

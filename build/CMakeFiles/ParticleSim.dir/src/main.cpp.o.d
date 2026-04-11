@@ -378,4 +378,6 @@ CMakeFiles/ParticleSim.dir/src/main.cpp.o: \
  /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/src/utils/benchmark.hpp \
  /usr/include/c++/13/chrono /usr/include/c++/13/bits/chrono.h \
  /usr/include/c++/13/ratio /usr/include/c++/13/ctime \
- /usr/include/c++/13/bits/parse_numbers.h
+ /usr/include/c++/13/bits/parse_numbers.h \
+ /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/src/utils/mouse.hpp \
+ /home/joao-pedro/Área\ de\ trabalho/Projetos/Particles/src/physics/particle_system.hpp

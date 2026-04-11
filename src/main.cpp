@@ -6,6 +6,7 @@
 #include "physics/particle_system.hpp"
 #include "render/renderer.hpp"
 #include "utils/benchmark.hpp"
+#include "utils/mouse.hpp"
 
 // =============================================================================
 // Constantes de simulação
@@ -18,80 +19,6 @@
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
-struct MouseState {
-        double x, y;               // posição atual em pixels
-        bool   holding = false;
-        std::vector<int> heldParticles;
-        std::vector<Vec2> offsets; // para manter a posição relativa ao clicar
-} mouse;
-
-// Dimensões da janela e do mundo simulado
-const unsigned int SCR_WIDTH    = 1280;
-const unsigned int SCR_HEIGHT   = 720;
-const float        WORLD_WIDTH  = 20.0f;
-const float        WORLD_HEIGHT = 15.0f;
-
-// =============================================================================
-// Protótipos de callbacks GLFW
-// =============================================================================
-
-glm::vec2 screenToWorld(double px, double py) {
-        float wx = ((float)px / SCR_WIDTH  - 0.5f) *  WORLD_WIDTH;
-        float wy = ((float)py / SCR_HEIGHT - 0.5f) * -WORLD_HEIGHT;
-        return glm::vec2(wx, wy);
-}
-
-void processInput(GLFWwindow* window) {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-                glfwSetWindowShouldClose(window, true);
-
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        }
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-        // Para redimensionamento dinâmico (opcional)
-        glViewport(0, 0, width, height);
-}
-
-void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-        mouse.x = xpos;
-        mouse.y = ypos;
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-        if (button != GLFW_MOUSE_BUTTON_LEFT) return;
-
-        ParticleSystem* system = static_cast<ParticleSystem*>(glfwGetWindowUserPointer(window));
-
-        if (action == GLFW_PRESS) {
-                glfwGetCursorPos(window, &mouse.x, &mouse.y);
-                glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
-
-                float pickRadius = 1.0f;
-                mouse.heldParticles.clear();
-                mouse.offsets.clear();
-
-                const auto& particles = system->getParticles();
-                for (int i = 0; i < (int)particles.size(); ++i) {
-                        float dx = particles[i].getPosition().getX() - worldPos.x;
-                        float dy = particles[i].getPosition().getY() - worldPos.y;
-                        float d  = std::sqrt(dx*dx + dy*dy);
-                        if (d < pickRadius) {
-                                mouse.heldParticles.push_back(i);
-                                mouse.offsets.push_back(Vec2(dx, dy));
-                        }
-                }
-
-                if (!mouse.heldParticles.empty())
-                        mouse.holding = true;
-
-        } else if (action == GLFW_RELEASE) {
-                mouse.holding = false;
-                mouse.heldParticles.clear();
-                mouse.offsets.clear();
-        }
-}
 
 // =============================================================================
 // main
@@ -223,15 +150,6 @@ int main(int argc, char** argv) {
 
                 // Passo de física
                 system.update();
-
-                if (mouse.holding) {
-                        glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
-                        for (size_t i = 0; i < mouse.heldParticles.size(); ++i) {
-                                Vec2 target(worldPos.x + mouse.offsets[i].getX(),
-                                        worldPos.y + mouse.offsets[i].getY());
-                                system.setParticlePosition(mouse.heldParticles[i], target);
-                        }
-                }
 
                 // Passo de renderização
                 renderer.draw(system.getParticles(), system.getTimeStep());
