@@ -34,27 +34,30 @@ void ParticleSystem::addParticle(const Particle& p) {
     particles.push_back(p);
 }
 
-// Handle world boundary collisions
 void ParticleSystem::handleWorldBoundaries() {
     for (auto& p : particles) {
-        Vec2 pos = p.getPosition();
-        float r = p.getRadius();
+        Vec2  pos  = p.getPosition();
+        Vec2  prev = p.getPrevPosition();
+        float r    = p.getRadius();
 
         if (pos.getX() - r < bounds.left) {
             pos.setX(bounds.left + r);
-        }
-        else if (pos.getX() + r > bounds.right) {
+            prev.setX(bounds.left + r + (bounds.left + r - prev.getX()));
+        } else if (pos.getX() + r > bounds.right) {
             pos.setX(bounds.right - r);
+            prev.setX(bounds.right - r + (bounds.right - r - prev.getX()));
         }
 
         if (pos.getY() - r < bounds.top) {
             pos.setY(bounds.top + r);
-        }
-        else if (pos.getY() + r > bounds.bottom) {
+            prev.setY(bounds.top + r + (bounds.top + r - prev.getY()));
+        } else if (pos.getY() + r > bounds.bottom) {
             pos.setY(bounds.bottom - r);
+            prev.setY(bounds.bottom - r + (bounds.bottom - r - prev.getY()));
         }
 
         p.setPosition(pos);
+        p.setPrevPosition(prev);
     }
 }
 
@@ -141,68 +144,45 @@ void ParticleSystem::handleCollision(Particle& p1, Particle& p2) {
     Vec2 pos_i = p1.getPosition();
     Vec2 pos_j = p2.getPosition();
 
-    float ri = p1.getRadius();
-    float rj = p2.getRadius();
+    float ri   = p1.getRadius();
+    float rj   = p2.getRadius();
     float rsum = ri + rj;
 
-    Vec2 delta = pos_j - pos_i;
-    float dist = delta.length();
+    Vec2  delta = pos_j - pos_i;
+    float dist  = delta.length();
 
-    if (dist <= 0.0f || dist >= rsum)
-        return;
+    if (dist <= 0.0f || dist >= rsum) return;
 
-    // Normal de colisão
-    Vec2 n = delta / dist;
-
-    // Penetração
+    Vec2  n           = delta / dist;
     float penetration = rsum - dist;
+    float mi          = p1.getMass();
+    float mj          = p2.getMass();
+    float totalMass   = mi + mj;
 
-    // Massas
-    float mi = p1.getMass();
-    float mj = p2.getMass();
-    float sum = mi + mj;
+    // Correção posicional proporcional às massas
+    float restitution = 0.8f; // 1.0 = totalmente elástico, 0.5 = amortecido
+    p1.setPosition(pos_i - n * penetration * (mj / totalMass) * restitution);
+    p2.setPosition(pos_j + n * penetration * (mi / totalMass) * restitution);
 
-    // Pesos (quebram simetria numérica)
-    float wi = mj / sum;
-    float wj = mi / sum;
+    // Velocidades estimadas via Verlet
+    Vec2  vel_i = (pos_i - p1.getPrevPosition()) / dt;
+    Vec2  vel_j = (pos_j - p2.getPrevPosition()) / dt;
 
-    // Correção posicional
-    Vec2 correction = n * penetration;
+    // Velocidade relativa na direção normal
+    float vrel = (vel_i - vel_j).getX() * n.getX()
+               + (vel_i - vel_j).getY() * n.getY();
 
-    Vec2 newPosI = pos_i - correction * wi;
-    Vec2 newPosJ = pos_j + correction * wj;
+    // Só resolve se as partículas estão se aproximando
+    if (vrel <= 0.0f) return;
 
-    p1.setPosition(newPosI);
-    p2.setPosition(newPosJ);
+    // Impulso com coeficiente de restituição (conserva momento)
+    float impulse = (1.0f + collision_damping) * vrel / totalMass;
 
-    // --- ajuste de "velocidade" via prev_position ---
-    Vec2 prev_i = p1.getPrevPosition();
-    Vec2 prev_j = p2.getPrevPosition();
+    Vec2 vel_i_new = vel_i - n * (impulse * mj);
+    Vec2 vel_j_new = vel_j + n * (impulse * mi);
 
-    Vec2 vel_i = (pos_i - prev_i) / dt;
-    Vec2 vel_j = (pos_j - prev_j) / dt;
-
-    // componente normal
-    float vi_n = vel_i.getX() * n.getX() + vel_i.getY() * n.getY();
-    float vj_n = vel_j.getX() * n.getX() + vel_j.getY() * n.getY();
-
-    float rel = vi_n - vj_n;
-
-    if (rel < 0.0f) {
-        float e = collision_damping;
-
-        float vi_n_new = -vi_n * e;
-        float vj_n_new = -vj_n * e;
-
-        Vec2 vel_i_new = vel_i + n * (vi_n_new - vi_n);
-        Vec2 vel_j_new = vel_j + n * (vj_n_new - vj_n);
-
-        p1.setPrevPosition(newPosI - vel_i_new * dt);
-        p2.setPrevPosition(newPosJ - vel_j_new * dt);
-    } else {
-        p1.setPrevPosition(newPosI - vel_i * dt);
-        p2.setPrevPosition(newPosJ - vel_j * dt);
-    }
+    //p1.setPrevPosition(p1.getPosition() - vel_i_new * dt);
+    //p2.setPrevPosition(p2.getPosition() - vel_j_new * dt);
 }
 
 // Optimized collision handling with cache blocking
@@ -241,6 +221,7 @@ void ParticleSystem::handleCollisionsSpatialGrid() {
 
         // Coleta células vizinhas de todas as partículas do bloco i
         std::vector<size_t> neighbors;
+
         for (size_t i = ii; i < iEnd; ++i) {
             if (!particles[i].isActive()) continue;
             int cx = grid.cellCol(particles[i].getPosition().getX());
@@ -273,6 +254,7 @@ void ParticleSystem::handleCollisionsSpatialGrid() {
 void ParticleSystem::applyGravity() {
     // Gravidade aponta para baixo (y negativo)
     Vec2 gravity(0.0f, -9.81f);
+
     for (auto& p : particles) {
         if (p.isActive()) {
             p.applyForce(gravity * p.getMass());
@@ -300,75 +282,7 @@ void ParticleSystem::update() {
         p.verletIntegration(dt, damping);
 
     handleWorldBoundaries();
-
-    // Monta grid uma vez fora do solver
-    float maxRadius = 0.0f;
-    for (const auto& p : particles)
-        maxRadius = std::max(maxRadius, p.getRadius());
-
-    SpatialGrid grid;
-    grid.build(particles, bounds.left, bounds.top,
-            bounds.right, bounds.bottom, 2.0f * maxRadius);
-
-    int maxDensity = grid.getMaxDensity();
-
-    const int maxIterations = 4;
-    const int minIterations = 1;
-    const int densityThreshold = 8; // acima disso começa a reduzir
-
-    for (size_t ii = 0; ii < particles.size(); ii += blockSize) {
-        size_t iEnd = std::min(ii + blockSize, particles.size());
-
-        // Calcula densidade média do bloco
-        int blockDensity = 0;
-        int activeInBlock = 0;
-        for (size_t i = ii; i < iEnd; ++i) {
-            if (!particles[i].isActive()) continue;
-            int cx = grid.cellCol(particles[i].getPosition().getX());
-            int cy = grid.cellRow(particles[i].getPosition().getY());
-            blockDensity += grid.getCellDensity(cx, cy);
-            activeInBlock++;
-        }
-
-        if (activeInBlock == 0) continue;
-        blockDensity /= activeInBlock;
-
-        // Escala iterações inversamente à densidade
-        int iterations = maxIterations;
-        if (blockDensity > densityThreshold) {
-            float densityRatio = (float)densityThreshold / (float)blockDensity;
-            iterations = std::max(minIterations,
-                                (int)std::round(maxIterations * densityRatio));
-        }
-
-        // Roda o solver com iterações adaptativas pra esse bloco
-        std::vector<size_t> neighbors;
-        for (int k = 0; k < iterations; ++k) {
-            neighbors.clear();
-            for (size_t i = ii; i < iEnd; ++i) {
-                if (!particles[i].isActive()) continue;
-                int cx = grid.cellCol(particles[i].getPosition().getX());
-                int cy = grid.cellRow(particles[i].getPosition().getY());
-                grid.getNeighbors(cx, cy, neighbors);
-            }
-
-            std::sort(neighbors.begin(), neighbors.end());
-            neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
-
-            for (size_t jj = 0; jj < neighbors.size(); jj += blockSize) {
-                size_t jEnd = std::min(jj + blockSize, neighbors.size());
-                for (size_t i = ii; i < iEnd; ++i) {
-                    if (!particles[i].isActive()) continue;
-                    for (size_t jIdx = jj; jIdx < jEnd; ++jIdx) {
-                        size_t j = neighbors[jIdx];
-                        if (j <= i) continue;
-                        if (!particles[j].isActive()) continue;
-                        handleCollision(particles[i], particles[j]);
-                    }
-                }
-            }
-        }
-    }
+    handleCollisionsSpatialGrid(); // o método já itera internamente
 }
 
 void ParticleSystem::clearInactiveParticles() {

@@ -12,9 +12,9 @@
 // Ajuste aqui para mudar o comportamento geral sem tocar na física ou no render.
 // =============================================================================
 
-#define MAX_PARTICLES    5000
+#define MAX_PARTICLES    10000
 #define DAMPING          0.99f   // amortecimento global do integrador Verlet
-#define TIME_STEP        0.016f  // passo de tempo fixo (~60Hz)
+#define TIME_STEP        0.008f  // passo de tempo fixo (~60Hz)
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
                         Vec2(x, y),
                         Vec2(rand() % 10 - 5, rand() % 10 - 5),
                         1.0f + (rand() % 100) / 50.0f,
-                        0.1f,
+                        0.1f,  //raio
                         glm::vec3(
                                 (rand() % 100) / 100.0f,
                                 (rand() % 100) / 100.0f,
