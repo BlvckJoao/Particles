@@ -20,7 +20,7 @@
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
-#define RAY_LENGTH       0.05f    // comprimento do "raio" para detecção de clique em partículas
+#define RAY_LENGTH       0.1f    // comprimento do "raio" para detecção de clique em partículas
 
 // =============================================================================
 // main
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
         std::uniform_real_distribution<float> dist_pos_x(-WORLD_WIDTH  / 2.0f, WORLD_WIDTH  / 2.0f);
         std::uniform_real_distribution<float> dist_pos_y(-WORLD_HEIGHT / 2.0f, WORLD_HEIGHT / 2.0f);
         std::uniform_real_distribution<float> dist_vel(-2.0f, 2.0f);
-        std::uniform_real_distribution<float> dist_mass(1.0f, 3.0f);
+        std::uniform_real_distribution<float> dist_mass(3.0f, 5.0f);
         std::uniform_real_distribution<float> dist_color(0.0f, 1.0f);
 
         // Popula com partículas em posições e velocidades aleatórias
