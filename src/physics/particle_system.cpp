@@ -185,52 +185,35 @@ void ParticleSystem::handleCollisionsSeq() {
 }
 
 // Handle collision between two particles
-void ParticleSystem::handleCollision(Particle& p1, Particle& p2) {
-    Vec2 pos_i = p1.getPosition();
-    Vec2 pos_j = p2.getPosition();
+void ParticleSystem::handleCollision(Particle& p1, Particle& p2, int neighbors_i, int neighbors_j) {
+        Vec2 pos_i = p1.getPosition();
+        Vec2 pos_j = p2.getPosition();
 
-    float ri   = p1.getRadius();
-    float rj   = p2.getRadius();
-    float rsum = ri + rj;
+        float ri   = p1.getRadius();
+        float rj   = p2.getRadius();
+        float rsum = ri + rj;
 
-    Vec2  delta = pos_j - pos_i;
-    float dist  = delta.length();
+        Vec2  delta = pos_j - pos_i;
+        float dist  = delta.length();
 
-    if (dist <= 0.0f || dist >= rsum) return;
+        if (dist <= 0.0f || dist >= rsum) return;
 
-    Vec2  n           = delta / dist;
-    float penetration = rsum - dist;
-    float mi          = p1.getMass();
-    float mj          = p2.getMass();
-    float totalMass   = mi + mj;
+        Vec2  n           = delta / dist;
+        float penetration = rsum - dist;
+        float mi          = p1.getMass();
+        float mj          = p2.getMass();
+        float totalMass   = mi + mj;
 
-    // Correção posicional proporcional às massas
-    float restitution = 0.8f; // 1.0 = totalmente elástico, 0.5 = amortecido
-    p1.setPosition(pos_i - n * penetration * (mj / totalMass) * restitution);
-    p2.setPosition(pos_j + n * penetration * (mi / totalMass) * restitution);
+        // Peso inversamente proporcional à densidade local
+        float density_scale = 1.0f / std::max(1, (neighbors_i + neighbors_j) / 2);
 
-    // Velocidades estimadas via Verlet
-    Vec2  vel_i = (pos_i - p1.getPrevPosition()) / dt;
-    Vec2  vel_j = (pos_j - p2.getPrevPosition()) / dt;
+        float wi = (mj / totalMass) * density_scale;
+        float wj = (mi / totalMass) * density_scale;
 
-    // Velocidade relativa na direção normal
-    float vrel = (vel_i - vel_j).getX() * n.getX()
-               + (vel_i - vel_j).getY() * n.getY();
-
-    // Só resolve se as partículas estão se aproximando
-    if (vrel <= 0.0f) return;
-
-    // Impulso com coeficiente de restituição (conserva momento)
-    float impulse = (1.0f + collision_damping) * vrel / totalMass;
-
-    Vec2 vel_i_new = vel_i - n * (impulse * mj);
-    Vec2 vel_j_new = vel_j + n * (impulse * mi);
-
-    //p1.setPrevPosition(p1.getPosition() - vel_i_new * dt);
-    //p2.setPrevPosition(p2.getPosition() - vel_j_new * dt);
+        p1.setPosition(pos_i - n * penetration * wi * (1.0f + collision_damping) * 0.5f);
+        p2.setPosition(pos_j + n * penetration * wj * (1.0f + collision_damping) * 0.5f);
 }
-
-// Optimized collision handling with cache blocking
+// Optimized collision handling with cache blocking UNUSED
 void ParticleSystem::optmizedCollisionHandling() {
     //cache blocking and checking only nearby particles would go here
     const size_t count = particles.size();
@@ -241,7 +224,7 @@ void ParticleSystem::optmizedCollisionHandling() {
                 if (!particles[i].isActive()) continue;
                 for(size_t j = jj; j < std::min(jj + blockSize, count); ++j) {
                     if (!particles[j].isActive()) continue;
-                    handleCollision(particles[i], particles[j]);
+                    handleCollision(particles[i], particles[j], 0, 0); // neighbor counts would be passed here if used
                 }
             }
         }
@@ -249,51 +232,45 @@ void ParticleSystem::optmizedCollisionHandling() {
 }
 
 // Collision handling using spatial grid
-void ParticleSystem::handleCollisionsSpatialGrid() {
+void ParticleSystem::handleCollisionsSpatialGrid(const SpatialGrid& grid) {
+        const size_t count = particles.size();
 
-    float maxRadius = 0.0f;
-    for (const auto& p : particles)
-        maxRadius = std::max(maxRadius, p.getRadius());
+        for (size_t ii = 0; ii < count; ii += blockSize) {
+                size_t iEnd = std::min(ii + blockSize, count);
 
-    SpatialGrid grid;
-    grid.build(particles, bounds.left, bounds.top,
-            bounds.right, bounds.bottom, 2.0f * maxRadius);
+                std::vector<size_t> neighbors;
+                std::vector<int> neighbor_count(count, 0);
 
-    const size_t count = particles.size();
-
-    for (size_t ii = 0; ii < count; ii += blockSize) {
-        size_t iEnd = std::min(ii + blockSize, count);
-
-        // Coleta células vizinhas de todas as partículas do bloco i
-        std::vector<size_t> neighbors;
-
-        for (size_t i = ii; i < iEnd; ++i) {
-            if (!particles[i].isActive()) continue;
-            int cx = grid.cellCol(particles[i].getPosition().getX());
-            int cy = grid.cellRow(particles[i].getPosition().getY());
-            grid.getNeighbors(cx, cy, neighbors);
-        }
-
-        // Remove duplicatas dos vizinhos coletados
-        std::sort(neighbors.begin(), neighbors.end());
-        neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
-
-        // Cache blocking sobre os vizinhos
-        for (size_t jj = 0; jj < neighbors.size(); jj += blockSize) {
-            size_t jEnd = std::min(jj + blockSize, neighbors.size());
-
-            for (size_t i = ii; i < iEnd; ++i) {
-                if (!particles[i].isActive()) continue;
-                for (size_t jIdx = jj; jIdx < jEnd; ++jIdx) {
-                    size_t j = neighbors[jIdx];
-                    if (j <= i) continue;
-                    if (!particles[j].isActive()) continue;
-                    handleCollision(particles[i], particles[j]);
+                for (size_t i = ii; i < iEnd; ++i) {
+                        if (!particles[i].isActive()) continue;
+                        int cx = grid.cellCol(particles[i].getPosition().getX());
+                        int cy = grid.cellRow(particles[i].getPosition().getY());
+                        std::vector<size_t> local;
+                        grid.getNeighbors(cx, cy, local);
+                        neighbor_count[i] = (int)local.size();
+                        neighbors.insert(neighbors.end(), local.begin(), local.end());
                 }
-            }
+
+                std::sort(neighbors.begin(), neighbors.end());
+                neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
+
+                for (size_t jj = 0; jj < neighbors.size(); jj += blockSize) {
+                        size_t jEnd = std::min(jj + blockSize, neighbors.size());
+
+                        for (size_t i = ii; i < iEnd; ++i) {
+                                if (!particles[i].isActive()) continue;
+                                for (size_t jIdx = jj; jIdx < jEnd; ++jIdx) {
+                                        size_t j = neighbors[jIdx];
+                                        if (j <= i) continue;
+                                        if (!particles[j].isActive()) continue;
+                                        handleCollision(particles[i], particles[j],
+                                                        neighbor_count[i], neighbor_count[j]);
+                                }
+                        }
+                }
         }
-    }
 }
+
 
 // Apply gravity to all particles
 void ParticleSystem::applyGravity() {
@@ -322,13 +299,23 @@ void ParticleSystem::updateSleepState(float sleepThreshold) {
 // Main update function
 void ParticleSystem::update() {
         applyGravity();
-        applyMouseForce(); // antes de integrar
+        applyMouseForce();
 
         for (auto& p : particles)
                 p.verletIntegration(dt, damping);
 
         handleWorldBoundaries();
-        handleCollisionsSpatialGrid();
+
+        // Build uma vez, resolve N vezes
+        float maxRadius = 0.0f;
+        for (const auto& p : particles)
+                maxRadius = std::max(maxRadius, p.getRadius());
+
+        SpatialGrid grid;
+        grid.build(particles, bounds.left, bounds.top,
+                   bounds.right, bounds.bottom, 2.0f * maxRadius);
+
+        handleCollisionsSpatialGrid(grid);
 }
 
 void ParticleSystem::clearInactiveParticles() {

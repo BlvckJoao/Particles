@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
                         Vec2(x, y),
                         Vec2(dist_vel(gen), dist_vel(gen)),
                         dist_mass(gen),
-                        RAY_LENGTH,  // raio
+                        RAY_LENGTH,
                         glm::vec3(
                                 dist_color(gen),
                                 dist_color(gen),

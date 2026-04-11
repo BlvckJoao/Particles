@@ -30,7 +30,7 @@ class ParticleSystem {
         std::vector<int> heldParticles;
         std::vector<Vec2> heldOffsets;
 
-        void handleCollision(Particle& p1, Particle& p2);
+        void handleCollision(Particle& p1, Particle& p2, int neighbors_i, int neighbors_j);
 
     public:
         void startHold(const std::vector<int>& indices, const std::vector<Vec2>& offsets, const Vec2& target);
@@ -56,7 +56,7 @@ class ParticleSystem {
 
         void optmizedCollisionHandling();
 
-        void handleCollisionsSpatialGrid();
+        void handleCollisionsSpatialGrid(const SpatialGrid& grid);
 
         void applyGravity();
 
