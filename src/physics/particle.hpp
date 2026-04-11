@@ -60,22 +60,25 @@ struct Particle{
         bool isSleeping() const noexcept { return is_sleeping; }
         void setSleeping(bool s) noexcept { is_sleeping = s; }
 
-        void verletIntegration(float dt, float damping = 0.999f){
-            if(!is_active){
-                prev_position = position;
-                clearForces();
-                acceleration.clear();
-                return;
+        void verletIntegration(float dt, float damping) {
+            if (!is_active) {
+                    prev_position = position;
+                    clearForces();
+                    acceleration.clear();
+                    return;
             }
 
             acceleration = forceAccumulator / mass;
 
-            Vec2 temp = position;
-            position += (position - prev_position) * damping + acceleration * (dt * dt);
+            Vec2 temp     = position;
+            Vec2 velocity = (position - prev_position) * damping; // damping só na inércia
+
+            position      = position + velocity + acceleration * (dt * dt);
             prev_position = temp;
 
             clearForces();
-        }
+            acceleration.clear();
+    }
 
         void velocityVerlet(float dt, float damping = 0.999f){
             if (!is_active) {

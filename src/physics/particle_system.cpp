@@ -189,29 +189,21 @@ void ParticleSystem::handleCollision(Particle& p1, Particle& p2, int neighbors_i
         Vec2 pos_i = p1.getPosition();
         Vec2 pos_j = p2.getPosition();
 
-        float ri   = p1.getRadius();
-        float rj   = p2.getRadius();
-        float rsum = ri + rj;
-
-        Vec2  delta = pos_j - pos_i;
+        float rsum = p1.getRadius() + p2.getRadius();
+        Vec2  delta = pos_i - pos_j;
         float dist  = delta.length();
 
-        if (dist <= 0.0f || dist >= rsum) return;
+        if (dist >= rsum || dist <= 0.0f) return;
 
         Vec2  n           = delta / dist;
         float penetration = rsum - dist;
-        float mi          = p1.getMass();
-        float mj          = p2.getMass();
-        float totalMass   = mi + mj;
 
-        // Peso inversamente proporcional à densidade local
-        float density_scale = 1.0f / std::max(1, (neighbors_i + neighbors_j) / 2);
+        float avg_neighbors = (neighbors_i + neighbors_j) * 0.5f;
+        float density_push  = 1.0f + avg_neighbors * 0.05f;
 
-        float wi = (mj / totalMass) * density_scale;
-        float wj = (mi / totalMass) * density_scale;
-
-        p1.setPosition(pos_i - n * penetration * wi * (1.0f + collision_damping) * 0.5f);
-        p2.setPosition(pos_j + n * penetration * wj * (1.0f + collision_damping) * 0.5f);
+        // Só correção posicional, 50/50 — nunca toca em prev_position
+        p1.setPosition(pos_i + n * penetration * 0.5f * density_push);
+        p2.setPosition(pos_j - n * penetration * 0.5f * density_push);
 }
 // Optimized collision handling with cache blocking UNUSED
 void ParticleSystem::optmizedCollisionHandling() {
@@ -238,34 +230,23 @@ void ParticleSystem::handleCollisionsSpatialGrid(const SpatialGrid& grid) {
         for (size_t ii = 0; ii < count; ii += blockSize) {
                 size_t iEnd = std::min(ii + blockSize, count);
 
-                std::vector<size_t> neighbors;
-                std::vector<int> neighbor_count(count, 0);
-
                 for (size_t i = ii; i < iEnd; ++i) {
                         if (!particles[i].isActive()) continue;
+
                         int cx = grid.cellCol(particles[i].getPosition().getX());
                         int cy = grid.cellRow(particles[i].getPosition().getY());
-                        std::vector<size_t> local;
-                        grid.getNeighbors(cx, cy, local);
-                        neighbor_count[i] = (int)local.size();
-                        neighbors.insert(neighbors.end(), local.begin(), local.end());
-                }
 
-                std::sort(neighbors.begin(), neighbors.end());
-                neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
+                        // Vizinhos só da célula de i — sem acumular vetor global
+                        std::vector<size_t> neighbors;
+                        grid.getNeighbors(cx, cy, neighbors);
+                        int ni = (int)neighbors.size();
 
-                for (size_t jj = 0; jj < neighbors.size(); jj += blockSize) {
-                        size_t jEnd = std::min(jj + blockSize, neighbors.size());
+                        for (size_t jIdx = 0; jIdx < neighbors.size(); ++jIdx) {
+                                size_t j = neighbors[jIdx];
+                                if (j <= i) continue; // evita par duplicado e auto-colisão
+                                if (!particles[j].isActive()) continue;
 
-                        for (size_t i = ii; i < iEnd; ++i) {
-                                if (!particles[i].isActive()) continue;
-                                for (size_t jIdx = jj; jIdx < jEnd; ++jIdx) {
-                                        size_t j = neighbors[jIdx];
-                                        if (j <= i) continue;
-                                        if (!particles[j].isActive()) continue;
-                                        handleCollision(particles[i], particles[j],
-                                                        neighbor_count[i], neighbor_count[j]);
-                                }
+                                handleCollision(particles[i], particles[j], ni, ni);
                         }
                 }
         }
@@ -298,6 +279,8 @@ void ParticleSystem::updateSleepState(float sleepThreshold) {
 
 // Main update function
 void ParticleSystem::update() {
+        constexpr int SUBSTEPS = 8;
+
         applyGravity();
         applyMouseForce();
 
@@ -306,16 +289,16 @@ void ParticleSystem::update() {
 
         handleWorldBoundaries();
 
-        // Build uma vez, resolve N vezes
         float maxRadius = 0.0f;
         for (const auto& p : particles)
                 maxRadius = std::max(maxRadius, p.getRadius());
 
         SpatialGrid grid;
         grid.build(particles, bounds.left, bounds.top,
-                   bounds.right, bounds.bottom, 2.0f * maxRadius);
-
-        handleCollisionsSpatialGrid(grid);
+                    bounds.right, bounds.bottom, 2.0f * maxRadius);
+        for (int s = 0; s < SUBSTEPS; ++s) {
+                handleCollisionsSpatialGrid(grid);
+        }
 }
 
 void ParticleSystem::clearInactiveParticles() {
