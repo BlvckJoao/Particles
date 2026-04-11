@@ -61,6 +61,12 @@ void ParticleSystem::handleWorldBoundaries() {
     }
 }
 
+void ParticleSystem::setParticlePosition(int index, const Vec2& pos) {
+        if (index < 0 || index >= (int)particles.size()) return;
+        particles[index].setPosition(pos);
+        particles[index].setPrevPosition(pos); // zera velocidade
+}
+
 // Sequential collision handling
 void ParticleSystem::handleCollisionsSeq() {
     const size_t count = particles.size();

@@ -41,6 +41,8 @@ class ParticleSystem {
 
         void handleWorldBoundaries();
 
+        void setParticlePosition(int index, const Vec2& pos);
+
         void handleCollisionsSeq();
 
         void optmizedCollisionHandling();

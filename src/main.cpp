@@ -18,6 +18,12 @@
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
+struct MouseState {
+        double x, y;               // posição atual em pixels
+        bool   holding = false;
+        int    heldParticle = -1;  // índice da partícula segurada (-1 = nenhuma)
+} mouse;
+
 // Dimensões da janela e do mundo simulado
 const unsigned int SCR_WIDTH    = 1280;
 const unsigned int SCR_HEIGHT   = 720;
@@ -28,8 +34,57 @@ const float        WORLD_HEIGHT = 15.0f;
 // Protótipos de callbacks GLFW
 // =============================================================================
 
-void processInput(GLFWwindow* window);
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+glm::vec2 screenToWorld(double px, double py) {
+        float wx = ((float)px / SCR_WIDTH  - 0.5f) *  WORLD_WIDTH;
+        float wy = ((float)py / SCR_HEIGHT - 0.5f) * -WORLD_HEIGHT;
+        return glm::vec2(wx, wy);
+}
+
+void processInput(GLFWwindow* window) {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+                glfwSetWindowShouldClose(window, true);
+
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        }
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+        // Para redimensionamento dinâmico (opcional)
+        glViewport(0, 0, width, height);
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+        if (button != GLFW_MOUSE_BUTTON_LEFT) return;
+
+        ParticleSystem* system = static_cast<ParticleSystem*>(glfwGetWindowUserPointer(window));
+
+        if (action == GLFW_PRESS) {
+                glfwGetCursorPos(window, &mouse.x, &mouse.y);
+                glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
+
+                float pickRadius   = 0.5f;
+                float minDist      = pickRadius;
+                mouse.heldParticle = -1;
+
+                const auto& particles = system->getParticles();
+                for (int i = 0; i < (int)particles.size(); ++i) {
+                        float dx = particles[i].getPosition().getX() - worldPos.x;
+                        float dy = particles[i].getPosition().getY() - worldPos.y;
+                        float d  = std::sqrt(dx*dx + dy*dy);
+                        if (d < minDist) {
+                                minDist = d;
+                                mouse.heldParticle = i;
+                        }
+                }
+
+                if (mouse.heldParticle != -1)
+                        mouse.holding = true;
+
+        } else if (action == GLFW_RELEASE) {
+                mouse.holding      = false;
+                mouse.heldParticle = -1;
+        }
+}
 
 // =============================================================================
 // main
@@ -73,8 +128,6 @@ int main(int argc, char** argv) {
         }
 
         glfwMakeContextCurrent(window);
-        glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-        glfwSetMouseButtonCallback(window, mouse_button_callback);
 
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
                 std::cerr << "Falha ao inicializar GLAD" << std::endl;
@@ -119,6 +172,11 @@ int main(int argc, char** argv) {
                 system.addParticle(p);
         }
 
+        // Agora que system existe, pode configurar callbacks
+        glfwSetWindowUserPointer(window, &system);
+        glfwSetMouseButtonCallback(window, mouse_button_callback);
+        glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
         // -------------------------------------------------------------------------
         // Benchmarks de inicialização (roda uma vez antes do loop principal)
         // -------------------------------------------------------------------------
@@ -154,6 +212,15 @@ int main(int argc, char** argv) {
                 processInput(window);
 
                 glClear(GL_COLOR_BUFFER_BIT);
+
+                if (mouse.holding && mouse.heldParticle != -1) {
+                        glm::vec2 worldPos = screenToWorld(mouse.x, mouse.y);
+                        Vec2 target(worldPos.x, worldPos.y);
+
+                        // Atualiza posição e prev para a mesma posição — velocidade zero
+                        // O Verlet vai manter ela parada enquanto você segura
+                        system.setParticlePosition(mouse.heldParticle, target);
+                }
 
                 // Passo de física
                 system.update();
@@ -191,19 +258,4 @@ int main(int argc, char** argv) {
         renderer.cleanup();
         glfwTerminate();
         return 0;
-}
-
-void processInput(GLFWwindow* window) {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-                glfwSetWindowShouldClose(window, true);
-
-        // Espaço: reservado para adicionar partículas em runtime
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        }
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-        // Botão esquerdo: reservado para interação com o mouse
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        }
 }
