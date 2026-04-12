@@ -60,6 +60,9 @@ struct SpatialGrid {
             maxD = std::max(maxD, (int)cell.size());
         return maxD;
     }
+
+    int getNumCols() const { return cols; }
+    int getNumRows() const { return rows; }
 };
 
 #endif

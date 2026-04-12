@@ -7,10 +7,11 @@
 
 #include "particle.hpp"
 #include "particle_system.hpp"
+#include "utils/thread_pool.hpp"
 
 // Constructor implementation
-ParticleSystem::ParticleSystem(float left, float right, float top, float bottom, size_t blockSize, float timeStep, float damp, float collision_damp)
-    : bounds{ left, right, top, bottom }, blockSize(blockSize), damping(damp), dt(timeStep), collision_damping(collision_damp) {}
+ParticleSystem::ParticleSystem(float left, float right, float top, float bottom, size_t blockSize, float timeStep, float damp, float collision_damp, size_t numThreads)
+    : bounds{ left, right, top, bottom }, blockSize(blockSize), damping(damp), dt(timeStep), collision_damping(collision_damp), threadPool(numThreads) {}
 
 // Getter for particles
 const std::vector<Particle>& ParticleSystem::getParticles() const {
@@ -219,7 +220,7 @@ void ParticleSystem::optmizedCollisionHandling() {
 }
 
 // Collision handling using spatial grid
-void ParticleSystem::handleCollisionsSpatialGrid(const SpatialGrid& grid) {
+void ParticleSystem::handleCollisionsSpatialGrid(const SpatialGrid& grid, int colBegin, int colEnd) {
         const size_t count = particles.size();
 
         for (size_t ii = 0; ii < count; ii += blockSize) {
@@ -229,13 +230,17 @@ void ParticleSystem::handleCollisionsSpatialGrid(const SpatialGrid& grid) {
                         if (!particles[i].isActive()) continue;
 
                         int cx = grid.cellCol(particles[i].getPosition().getX());
+
+                        // Só processa partículas na faixa de colunas desta thread
+                        if (cx < colBegin || cx >= colEnd) continue;
+
                         int cy = grid.cellRow(particles[i].getPosition().getY());
 
                         std::vector<size_t> neighbors;
                         grid.getNeighbors(cx, cy, neighbors);
 
                         for (size_t j : neighbors) {
-                                if (j == i) continue; // só evita auto-colisão
+                                if (j == i) continue;
                                 if (!particles[j].isActive()) continue;
                                 handleCollision(particles[i], particles[j]);
                         }
@@ -255,6 +260,32 @@ void ParticleSystem::applyGravity() {
     }
 }
 
+void ParticleSystem::handleParticleBoundary(size_t idx) {
+        auto& p    = particles[idx];
+        Vec2  pos  = p.getPosition();
+        Vec2  prev = p.getPrevPosition();
+        float r    = p.getRadius();
+
+        if (pos.getX() - r < bounds.left) {
+                pos.setX(bounds.left + r);
+                prev.setX(bounds.left + r + (bounds.left + r - prev.getX()));
+        } else if (pos.getX() + r > bounds.right) {
+                pos.setX(bounds.right - r);
+                prev.setX(bounds.right - r + (bounds.right - r - prev.getX()));
+        }
+
+        if (pos.getY() - r < bounds.top) {
+                pos.setY(bounds.top + r);
+                prev.setY(bounds.top + r + (bounds.top + r - prev.getY()));
+        } else if (pos.getY() + r > bounds.bottom) {
+                pos.setY(bounds.bottom - r);
+                prev.setY(bounds.bottom - r + (bounds.bottom - r - prev.getY()));
+        }
+
+        p.setPosition(pos);
+        p.setPrevPosition(prev);
+}
+
 // Update sleep state of particles based on velocity
 void ParticleSystem::updateSleepState(float sleepThreshold) {
     for (auto& p : particles) {
@@ -270,24 +301,86 @@ void ParticleSystem::updateSleepState(float sleepThreshold) {
 // Main update function
 void ParticleSystem::update() {
         constexpr int SUBSTEPS = 8;
+        const size_t  count    = particles.size();
+        const size_t  nThreads = std::thread::hardware_concurrency();
 
-        applyGravity();
-        applyMouseForce();
+        // ── Gravidade + integração em paralelo ──────────────────────────────
+        size_t chunkSize = (count + nThreads - 1) / nThreads;
 
-        for (auto& p : particles)
-                p.verletIntegration(dt, damping);
+        {
+                std::vector<std::future<void>> futures;
+                futures.reserve(nThreads);
 
-        handleWorldBoundaries();
+                for (size_t t = 0; t < nThreads; ++t) {
+                        size_t begin = t * chunkSize;
+                        size_t end   = std::min(begin + chunkSize, count);
+                        if (begin >= count) break;
 
+                        futures.push_back(threadPool.submit([this, begin, end] {
+                                Vec2 gravity(0.0f, -9.81f);
+                                for (size_t i = begin; i < end; ++i) {
+                                        if (!particles[i].isActive()) continue;
+                                        particles[i].applyForce(gravity * particles[i].getMass());
+                                        particles[i].verletIntegration(dt, damping);
+                                }
+                        }));
+                }
+
+                for (auto& f : futures) f.get();
+        }
+
+        applyMouseForce(); // mouse é sequencial — lida com índices arbitrários
+
+        // ── Boundaries em paralelo ──────────────────────────────────────────
+        {
+                std::vector<std::future<void>> futures;
+                futures.reserve(nThreads);
+
+                for (size_t t = 0; t < nThreads; ++t) {
+                        size_t begin = t * chunkSize;
+                        size_t end   = std::min(begin + chunkSize, count);
+                        if (begin >= count) break;
+
+                        futures.push_back(threadPool.submit([this, begin, end] {
+                                for (size_t i = begin; i < end; ++i)
+                                        handleParticleBoundary(i);
+                        }));
+                }
+
+                for (auto& f : futures) f.get();
+        }
+
+        // ── Build do grid (sequencial — depende de todas as posições) ───────
         float maxRadius = 0.0f;
         for (const auto& p : particles)
                 maxRadius = std::max(maxRadius, p.getRadius());
 
         SpatialGrid grid;
         grid.build(particles, bounds.left, bounds.top,
-                    bounds.right, bounds.bottom, 2.0f * maxRadius);
+                   bounds.right, bounds.bottom, 2.0f * maxRadius);
+
+        // ── Solver de colisão em paralelo por faixas do grid ─────────────── 
         for (int s = 0; s < SUBSTEPS; ++s) {
-                handleCollisionsSpatialGrid(grid);
+                std::vector<std::future<void>> futures;
+                futures.reserve(nThreads);
+
+                int cols       = grid.getNumCols();
+                int colsPerThread = (cols + nThreads - 1) / nThreads;
+
+                for (size_t t = 0; t < nThreads; ++t) {
+                        int colBegin = t * colsPerThread;
+                        int colEnd   = std::min(colBegin + colsPerThread, cols);
+                        if (colBegin >= cols) break;
+
+                        // Faixas com gap de 1 coluna entre threads — igual ao repo
+                        // Thread processa colunas [colBegin+1, colEnd-1]
+                        // Evita que células na borda de duas faixas sejam escritas por duas threads
+                        futures.push_back(threadPool.submit([this, &grid, colBegin, colEnd] {
+                                handleCollisionsSpatialGrid(grid, colBegin, colEnd);
+                        }));
+                }
+
+                for (auto& f : futures) f.get();
         }
 }
 

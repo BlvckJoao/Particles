@@ -11,6 +11,7 @@
 #include "math/vec2.hpp"
 #include "physics/particle.hpp"
 #include "spatial/spacial_grid.hpp"
+#include "utils/thread_pool.hpp"
 
 class ParticleSystem {
     private:
@@ -30,6 +31,8 @@ class ParticleSystem {
         std::vector<int> heldParticles;
         std::vector<Vec2> heldOffsets;
 
+        ThreadPool threadPool;
+
         void handleCollision(Particle& p1, Particle& p2);
 
     public:
@@ -37,7 +40,10 @@ class ParticleSystem {
         void updateMouseTarget(const Vec2& target);
         void applyMouseForce();
         void releaseHold();
-        ParticleSystem(float left, float right, float top, float bottom, size_t blockSize, float timeStep, float damp, float collision_damp = 0.85f);
+
+        ParticleSystem(float left, float right, float top, float bottom, 
+            size_t blockSize, float timeStep, float damp, float collision_damp = 0.85f,
+            size_t numThreads = std::thread::hardware_concurrency());
 
         const std::vector<Particle>& getParticles() const;
 
@@ -56,7 +62,9 @@ class ParticleSystem {
 
         void optmizedCollisionHandling();
 
-        void handleCollisionsSpatialGrid(const SpatialGrid& grid);
+        void handleCollisionsSpatialGrid(const SpatialGrid& grid, int colBegin, int colEnd);
+
+        void handleParticleBoundary(size_t index);
 
         void applyGravity();
 

@@ -14,7 +14,7 @@
 // Ajuste aqui para mudar o comportamento geral sem tocar na física ou no render.
 // =============================================================================
 
-#define MAX_PARTICLES    10000
+#define MAX_PARTICLES    50000
 #define DAMPING          0.99f   // amortecimento global do integrador Verlet
 #define TIME_STEP        0.008f  // passo de tempo fixo (~60Hz)
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
