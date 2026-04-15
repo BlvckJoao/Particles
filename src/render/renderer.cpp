@@ -189,7 +189,7 @@ void Renderer::draw(const std::vector<Particle>& particles, float dt) {
         glBindVertexArray(VAO);
         for (size_t i = 0; i < positions.size(); ++i) {
                 glUniform3fv(colorLoc, 1, glm::value_ptr(colors[i]));
-                glUniform1f(pointSizeLoc, radii[i] * sizeScale);
+                glUniform1f(pointSizeLoc, radii[i] * sizeScale * 2.0f);
                 glDrawArrays(GL_POINTS, static_cast<int>(i), 1);
         }
 }

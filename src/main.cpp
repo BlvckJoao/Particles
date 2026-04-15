@@ -17,10 +17,10 @@
 #define MAX_PARTICLES    50000
 #define DAMPING          0.99f   // amortecimento global do integrador Verlet
 #define TIME_STEP        0.008f  // passo de tempo fixo (~60Hz)
-#define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
+#define COLISION_DAMPING 0.5f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
-#define RAY_LENGTH       0.1f    // comprimento do "raio" para detecção de clique em partículas
+#define RAY_LENGTH       0.05f    // comprimento do "raio" para detecção de clique em partículas
 
 // =============================================================================
 // main
