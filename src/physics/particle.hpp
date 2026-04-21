@@ -69,9 +69,10 @@ struct Particle{
             }
 
             acceleration = forceAccumulator / mass;
+            damping = std::clamp(damping, 0.0f, 1.0f);
 
             Vec2 temp     = position;
-            Vec2 velocity = (position - prev_position) * damping; // damping só na inércia
+            Vec2 velocity = (position - prev_position) * damping;
 
             position      = position + velocity + acceleration * (dt * dt);
             prev_position = temp;
