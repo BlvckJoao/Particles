@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <thread>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -11,6 +12,7 @@
 #include "math/vec2.hpp"
 #include "physics/particle.hpp"
 #include "spatial/spacial_grid.hpp"
+#include "utils/thread_pool.hpp"
 
 class ParticleSystem {
     private:
@@ -24,6 +26,8 @@ class ParticleSystem {
         float damping;
         float collision_damping;
         float dt;
+        ThreadPool threadPool;
+        size_t workerCount;
 
         bool             mouseHolding = false;
         Vec2             mouseTarget;
@@ -31,13 +35,16 @@ class ParticleSystem {
         std::vector<Vec2> heldOffsets;
 
         void handleCollision(Particle& p1, Particle& p2);
+        void parallelFor(size_t count, const std::function<void(size_t, size_t)>& work);
 
     public:
         void startHold(const std::vector<int>& indices, const std::vector<Vec2>& offsets, const Vec2& target);
         void updateMouseTarget(const Vec2& target);
         void applyMouseForce();
         void releaseHold();
-        ParticleSystem(float left, float right, float top, float bottom, size_t blockSize, float timeStep, float damp, float collision_damp = 0.85f);
+        ParticleSystem(float left, float right, float top, float bottom, size_t blockSize,
+                       float timeStep, float damp, float collision_damp = 0.85f,
+                       size_t workers = std::thread::hardware_concurrency());
 
         const std::vector<Particle>& getParticles() const;
 

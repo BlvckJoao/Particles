@@ -3,11 +3,13 @@
 
 #include <vector>
 #include <queue>
+#include <algorithm>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <functional>
 #include <future>
+#include <stdexcept>
 
 //para uso futuro, caso queira implementar uma versão paralela do solver de colisões usando threads
 
@@ -22,6 +24,7 @@
 class ThreadPool {
 public:
         explicit ThreadPool(size_t numThreads) : stop(false) {
+                numThreads = std::max<size_t>(1, numThreads);
                 for (size_t i = 0; i < numThreads; ++i) {
                         workers.emplace_back([this] {
                                 while (true) {
@@ -49,6 +52,8 @@ public:
                 std::future<void> result = task->get_future();
                 {
                         std::unique_lock<std::mutex> lock(queueMutex);
+                        if (stop)
+                                throw std::runtime_error("cannot submit work to a stopped ThreadPool");
                         tasks.emplace([task] { (*task)(); });
                 }
                 condition.notify_one();

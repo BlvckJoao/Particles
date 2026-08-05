@@ -1,9 +1,9 @@
 
-if (NOT EXISTS "/home/joao-pedro/Área de trabalho/Projetos/Particles/build/libs/glfw/install_manifest.txt")
-    message(FATAL_ERROR "Cannot find install manifest: \"/home/joao-pedro/Área de trabalho/Projetos/Particles/build/libs/glfw/install_manifest.txt\"")
+if (NOT EXISTS "/home/joao/git/Particles/build/libs/glfw/install_manifest.txt")
+    message(FATAL_ERROR "Cannot find install manifest: \"/home/joao/git/Particles/build/libs/glfw/install_manifest.txt\"")
 endif()
 
-file(READ "/home/joao-pedro/Área de trabalho/Projetos/Particles/build/libs/glfw/install_manifest.txt" files)
+file(READ "/home/joao/git/Particles/build/libs/glfw/install_manifest.txt" files)
 string(REGEX REPLACE "\n" ";" files "${files}")
 
 foreach (file ${files})
