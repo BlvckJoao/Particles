@@ -411,6 +411,7 @@ CMakeFiles/ParticleSim.dir/src/main.cpp.o: \
  /usr/include/c++/11/bits/atomic_futex.h \
  /home/joao/git/Particles/src/render/renderer.hpp \
  /home/joao/git/Particles/src/render/../physics/particle.hpp \
+ /home/joao/git/Particles/src/render/../utils/thread_pool.hpp \
  /home/joao/git/Particles/src/utils/benchmark.hpp \
  /usr/include/c++/11/fstream /usr/include/c++/11/bits/codecvt.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \

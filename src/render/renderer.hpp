@@ -5,8 +5,11 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vector>
+#include <thread>
+#include <functional>
 
 #include "../physics/particle.hpp"
+#include "../utils/thread_pool.hpp"
 
 // =============================================================================
 // Renderer
@@ -45,8 +48,8 @@ public:
         // Deve ser chamado uma única vez, após glfwMakeContextCurrent.
         void init();
 
-        // Atualiza o VBO com as posições atuais, calcula cores por velocidade
-        // e emite um glDrawArrays por partícula.
+        // Prepara os dados das instâncias em paralelo, atualiza o VBO e desenha
+        // todas as partículas com uma única chamada instanciada.
         // dt: timestep da simulação, usado para estimar velocidade via Verlet.
         void draw(const std::vector<Particle>& particles, float dt);
 
@@ -55,8 +58,21 @@ public:
 
 private:
         unsigned int shaderProgram;
-        unsigned int VAO, VBO;
+        unsigned int VAO, instanceVBO;
         glm::mat4 projection;
+        ThreadPool threadPool;
+        size_t workerCount;
+
+        struct ParticleInstance {
+                glm::vec2 position;
+                float radius;
+                glm::vec3 color;
+        };
+
+        std::vector<float> speeds;
+        std::vector<ParticleInstance> instances;
+
+        void parallelFor(size_t count, const std::function<void(size_t, size_t)>& work);
 
         // Compila um shader GLSL e verifica erros. Retorna o ID do shader.
         unsigned int compileShader(unsigned int type, const char* source);

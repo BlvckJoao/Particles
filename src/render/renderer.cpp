@@ -4,6 +4,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <algorithm>
+#include <cstddef>
+#include <future>
 
 // =============================================================================
 // Shaders GLSL
@@ -20,15 +22,16 @@
 
 static const char* vertexShaderSource = R"(
         #version 330 core
-        layout (location = 0) in vec2 aPos;
+        layout (location = 0) in vec2 instancePosition;
+        layout (location = 1) in float instanceRadius;
+        layout (location = 2) in vec3 instanceColor;
         uniform mat4 projection;
-        uniform vec3 color;
-        uniform float pointSize;
+        uniform float sizeScale;
         out vec3 ParticleColor;
         void main() {
-                gl_Position = projection * vec4(aPos, 0.0, 1.0);
-                gl_PointSize = pointSize;
-                ParticleColor = color;
+                gl_Position = projection * vec4(instancePosition, 0.0, 1.0);
+                gl_PointSize = instanceRadius * sizeScale;
+                ParticleColor = instanceColor;
         }
 )";
 
@@ -55,7 +58,28 @@ Renderer::Renderer(unsigned int scrW, unsigned int scrH,
                    float worldW, float worldH)
         : scrWidth(scrW), scrHeight(scrH),
           worldWidth(worldW), worldHeight(worldH),
-          shaderProgram(0), VAO(0), VBO(0) {}
+          shaderProgram(0), VAO(0), instanceVBO(0),
+          threadPool(std::max(1u, std::thread::hardware_concurrency())),
+          workerCount(std::max(1u, std::thread::hardware_concurrency())) {}
+
+void Renderer::parallelFor(
+        size_t count, const std::function<void(size_t, size_t)>& work) {
+        if (count == 0) return;
+
+        const size_t taskCount = std::min(workerCount, count);
+        const size_t chunkSize = (count + taskCount - 1) / taskCount;
+        std::vector<std::future<void>> futures;
+        futures.reserve(taskCount);
+
+        for (size_t begin = 0; begin < count; begin += chunkSize) {
+                const size_t end = std::min(begin + chunkSize, count);
+                futures.emplace_back(threadPool.submit([&, begin, end] {
+                        work(begin, end);
+                }));
+        }
+
+        for (auto& future : futures) future.get();
+}
 
 void Renderer::init() {
         // Habilita tamanho de ponto programável e blending para o alpha dos círculos
@@ -93,16 +117,27 @@ void Renderer::init() {
                 -1.0f, 1.0f
         );
 
-        // VAO armazena o layout do buffer; VBO armazena as posições das partículas
+        // One interleaved instance buffer stores position, radius and color.
         glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &instanceVBO);
 
         glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
 
-        // Atributo 0: vec2 de posição (x, y), sem normalização, stride de 2 floats
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleInstance),
+                              reinterpret_cast<void*>(offsetof(ParticleInstance, position)));
         glEnableVertexAttribArray(0);
+        glVertexAttribDivisor(0, 1);
+
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(ParticleInstance),
+                              reinterpret_cast<void*>(offsetof(ParticleInstance, radius)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribDivisor(1, 1);
+
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleInstance),
+                              reinterpret_cast<void*>(offsetof(ParticleInstance, color)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribDivisor(2, 1);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
@@ -114,24 +149,16 @@ void Renderer::draw(const std::vector<Particle>& particles, float dt) {
         //   v ≈ (pos_atual - pos_anterior) / dt
         // Isso evita armazenar velocidade explicitamente na partícula.
         // -------------------------------------------------------------------------
-        std::vector<glm::vec2> positions;
-        std::vector<float>     radii;
-        std::vector<float>     speeds;
+        speeds.resize(particles.size());
+        instances.resize(particles.size());
 
-        positions.reserve(particles.size());
-        radii.reserve(particles.size());
-        speeds.reserve(particles.size());
-
-        for (const auto& p : particles) {
-                Vec2 pos  = p.getPosition();
-                Vec2 prev = p.getPrevPosition();
-
-                positions.push_back(glm::vec2(pos.getX(), pos.getY()));
-                radii.push_back(p.getRadius());
-
-                Vec2  dv = (pos - prev) / dt;
-                speeds.push_back(dv.length());
-        }
+        parallelFor(particles.size(), [&particles, dt, this](size_t begin, size_t end) {
+                for (size_t i = begin; i < end; ++i) {
+                        const Vec2 dv = (particles[i].getPosition() -
+                                         particles[i].getPrevPosition()) / dt;
+                        speeds[i] = dv.length();
+                }
+        });
 
         // -------------------------------------------------------------------------
         // Mapeamento de velocidade para cor: azul (parado) → vermelho (rápido)
@@ -143,11 +170,12 @@ void Renderer::draw(const std::vector<Particle>& particles, float dt) {
         for (float s : speeds) maxSpeed = std::max(maxSpeed, s);
         const float speedScale = std::max(maxSpeed, 5.0f);
 
-        std::vector<glm::vec3> colors;
-        colors.reserve(speeds.size());
-
-        for (float s : speeds) {
-                float t = glm::clamp(s / speedScale, 0.0f, 1.0f);
+        parallelFor(particles.size(),
+                    [&particles, speedScale, this](size_t begin, size_t end) {
+        for (size_t i = begin; i < end; ++i) {
+                const Particle& particle = particles[i];
+                const Vec2 position = particle.getPosition();
+                float t = glm::clamp(speeds[i] / speedScale, 0.0f, 1.0f);
 
                 glm::vec3 color;
                 if (t < 0.33f) {
@@ -161,42 +189,41 @@ void Renderer::draw(const std::vector<Particle>& particles, float dt) {
                         color = glm::vec3(1.0f, 1.0f - u, 0.0f);
                 }
 
-                colors.push_back(color);
+                instances[i] = {
+                        glm::vec2(position.getX(), position.getY()),
+                        particle.getRadius(),
+                        color
+                };
         }
+        });
 
-        // Envia todas as posições para a GPU de uma vez (GL_DYNAMIC_DRAW pois muda todo frame)
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        // OpenGL calls stay on the context-owning thread.
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
         glBufferData(GL_ARRAY_BUFFER,
-                     positions.size() * sizeof(glm::vec2),
-                     positions.data(),
-                     GL_DYNAMIC_DRAW);
+                     instances.size() * sizeof(ParticleInstance),
+                     instances.data(), GL_STREAM_DRAW);
 
         glUseProgram(shaderProgram);
 
         // Uniforms que não mudam por partícula
         GLint projLoc      = glGetUniformLocation(shaderProgram, "projection");
-        GLint colorLoc     = glGetUniformLocation(shaderProgram, "color");
-        GLint pointSizeLoc = glGetUniformLocation(shaderProgram, "pointSize");
+        GLint sizeScaleLoc = glGetUniformLocation(shaderProgram, "sizeScale");
 
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniform1f(sizeScaleLoc, sizeScale);
 
         // -------------------------------------------------------------------------
-        // Desenho individual por partícula: cada uma pode ter cor e tamanho diferentes.
-        // glDrawArrays(GL_POINTS, i, 1) desenha exatamente o ponto i do VBO.
-        // Overhead de uniform por partícula é aceitável para N <= ~5000;
-        // acima disso considerar instanced rendering.
+        // A single point is emitted for each instance. Position, radius and
+        // color advance once per instance because their divisors are one.
         // -------------------------------------------------------------------------
         glBindVertexArray(VAO);
-        for (size_t i = 0; i < positions.size(); ++i) {
-                glUniform3fv(colorLoc, 1, glm::value_ptr(colors[i]));
-                glUniform1f(pointSizeLoc, radii[i] * sizeScale);
-                glDrawArrays(GL_POINTS, static_cast<int>(i), 1);
-        }
+        glDrawArraysInstanced(GL_POINTS, 0, 1,
+                              static_cast<GLsizei>(instances.size()));
 }
 
 void Renderer::cleanup() {
         glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);
+        glDeleteBuffers(1, &instanceVBO);
         glDeleteProgram(shaderProgram);
 }
 
