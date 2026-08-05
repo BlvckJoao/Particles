@@ -20,7 +20,7 @@
 #define COLISION_DAMPING 0.85f   // restituição das colisões (0 = inelástico, 1 = elástico)
 #define BLOCK_SIZE       64      // tamanho do bloco para cache blocking no solver
 
-#define RAY_LENGTH       0.1f    // comprimento do "raio" para detecção de clique em partículas
+#define RAY_LENGTH       0.05f    // comprimento do "raio" para detecção de clique em partículas
 
 // =============================================================================
 // main

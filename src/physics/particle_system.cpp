@@ -1,6 +1,8 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <future>
+#include <utility>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -9,8 +11,32 @@
 #include "particle_system.hpp"
 
 // Constructor implementation
-ParticleSystem::ParticleSystem(float left, float right, float top, float bottom, size_t blockSize, float timeStep, float damp, float collision_damp)
-    : bounds{ left, right, top, bottom }, blockSize(blockSize), damping(damp), dt(timeStep), collision_damping(collision_damp) {}
+ParticleSystem::ParticleSystem(float left, float right, float top, float bottom,
+                               size_t blockSize, float timeStep, float damp,
+                               float collision_damp, size_t workers)
+    : bounds{ left, right, top, bottom }, blockSize(blockSize), damping(damp),
+      collision_damping(collision_damp), dt(timeStep),
+      threadPool(std::max<size_t>(1, workers)),
+      workerCount(std::max<size_t>(1, workers)) {}
+
+void ParticleSystem::parallelFor(
+        size_t count, const std::function<void(size_t, size_t)>& work) {
+        if (count == 0) return;
+
+        const size_t taskCount = std::min(workerCount, count);
+        const size_t chunkSize = (count + taskCount - 1) / taskCount;
+        std::vector<std::future<void>> futures;
+        futures.reserve(taskCount);
+
+        for (size_t begin = 0; begin < count; begin += chunkSize) {
+                const size_t end = std::min(begin + chunkSize, count);
+                futures.emplace_back(threadPool.submit([&, begin, end] {
+                        work(begin, end);
+                }));
+        }
+
+        for (auto& future : futures) future.get();
+}
 
 // Getter for particles
 const std::vector<Particle>& ParticleSystem::getParticles() const {
@@ -74,7 +100,9 @@ void ParticleSystem::applyMouseForce() {
 }
 
 void ParticleSystem::handleWorldBoundaries() {
-    for (auto& p : particles) {
+    parallelFor(particles.size(), [this](size_t begin, size_t end) {
+    for (size_t i = begin; i < end; ++i) {
+        Particle& p = particles[i];
         Vec2  pos  = p.getPosition();
         Vec2  prev = p.getPrevPosition();
         float r    = p.getRadius();
@@ -98,6 +126,7 @@ void ParticleSystem::handleWorldBoundaries() {
         p.setPosition(pos);
         p.setPrevPosition(prev);
     }
+    });
 }
 
 void ParticleSystem::setParticlePosition(int index, const Vec2& pos) {
@@ -220,25 +249,64 @@ void ParticleSystem::optmizedCollisionHandling() {
 
 // Collision handling using spatial grid
 void ParticleSystem::handleCollisionsSpatialGrid(const SpatialGrid& grid) {
-        const size_t count = particles.size();
+        using CellPair = std::pair<size_t, size_t>;
 
-        for (size_t ii = 0; ii < count; ii += blockSize) {
-                size_t iEnd = std::min(ii + blockSize, count);
+        auto solveCellPairs = [this, &grid](const std::vector<CellPair>& cellPairs) {
+                parallelFor(cellPairs.size(), [this, &grid, &cellPairs](size_t begin, size_t end) {
+                        for (size_t pairIndex = begin; pairIndex < end; ++pairIndex) {
+                                const auto [firstCell, secondCell] = cellPairs[pairIndex];
+                                const auto& a = grid.cells[firstCell];
+                                const auto& b = grid.cells[secondCell];
 
-                for (size_t i = ii; i < iEnd; ++i) {
-                        if (!particles[i].isActive()) continue;
-
-                        int cx = grid.cellCol(particles[i].getPosition().getX());
-                        int cy = grid.cellRow(particles[i].getPosition().getY());
-
-                        std::vector<size_t> neighbors;
-                        grid.getNeighbors(cx, cy, neighbors);
-
-                        for (size_t j : neighbors) {
-                                if (j == i) continue; // só evita auto-colisão
-                                if (!particles[j].isActive()) continue;
-                                handleCollision(particles[i], particles[j]);
+                                if (firstCell == secondCell) {
+                                        for (size_t i = 0; i < a.size(); ++i)
+                                                for (size_t j = i + 1; j < a.size(); ++j)
+                                                        handleCollision(particles[a[i]], particles[a[j]]);
+                                } else {
+                                        for (size_t i : a)
+                                                for (size_t j : b)
+                                                        handleCollision(particles[i], particles[j]);
+                                }
                         }
+                });
+        };
+
+        // Color 0: cells do not share particles, so all within-cell contacts
+        // can be solved concurrently without locks.
+        std::vector<CellPair> cellPairs;
+        cellPairs.reserve(grid.cells.size());
+        for (size_t cell = 0; cell < grid.cells.size(); ++cell) {
+                if (grid.cells[cell].size() > 1)
+                        cellPairs.emplace_back(cell, cell);
+        }
+        solveCellPairs(cellPairs);
+
+        // Each direction is split by the parity of the changing coordinate.
+        // Within one phase the resulting cell pairs are disjoint: no cell, and
+        // therefore no particle, can be touched by two workers simultaneously.
+        constexpr int neighborOffsets[4][2] = {
+                {1, -1}, {1, 0}, {1, 1}, {0, 1}
+        };
+        for (const auto& offset : neighborOffsets) {
+                for (int parity = 0; parity < 2; ++parity) {
+                        cellPairs.clear();
+                        for (int cy = 0; cy < grid.rows; ++cy) {
+                                for (int cx = 0; cx < grid.cols; ++cx) {
+                                        const int changingCoordinate = offset[0] != 0 ? cx : cy;
+                                        if ((changingCoordinate & 1) != parity) continue;
+
+                                        const int nx = cx + offset[0];
+                                        const int ny = cy + offset[1];
+                                        if (nx < 0 || nx >= grid.cols || ny < 0 || ny >= grid.rows)
+                                                continue;
+
+                                        const size_t first = static_cast<size_t>(cy * grid.cols + cx);
+                                        const size_t second = static_cast<size_t>(ny * grid.cols + nx);
+                                        if (!grid.cells[first].empty() && !grid.cells[second].empty())
+                                                cellPairs.emplace_back(first, second);
+                                }
+                        }
+                        solveCellPairs(cellPairs);
                 }
         }
 }
@@ -248,16 +316,21 @@ void ParticleSystem::applyGravity() {
     // Gravidade aponta para baixo (y negativo)
     Vec2 gravity(0.0f, -9.81f);
 
-    for (auto& p : particles) {
+    parallelFor(particles.size(), [this, gravity](size_t begin, size_t end) {
+    for (size_t i = begin; i < end; ++i) {
+        Particle& p = particles[i];
         if (p.isActive()) {
             p.applyForce(gravity * p.getMass());
         }
     }
+    });
 }
 
 // Update sleep state of particles based on velocity
 void ParticleSystem::updateSleepState(float sleepThreshold) {
-    for (auto& p : particles) {
+    parallelFor(particles.size(), [this, sleepThreshold](size_t begin, size_t end) {
+    for (size_t i = begin; i < end; ++i) {
+        Particle& p = particles[i];
         if (!p.isActive()) continue;
         Vec2 vel = (p.getPosition() - p.getPrevPosition()) / dt;
         if (vel.length() < sleepThreshold)
@@ -265,6 +338,7 @@ void ParticleSystem::updateSleepState(float sleepThreshold) {
         else
             p.setSleeping(false);
     }
+    });
 }
 
 // Main update function
@@ -274,8 +348,10 @@ void ParticleSystem::update() {
         applyGravity();
         applyMouseForce();
 
-        for (auto& p : particles)
-                p.verletIntegration(dt, damping);
+        parallelFor(particles.size(), [this](size_t begin, size_t end) {
+                for (size_t i = begin; i < end; ++i)
+                        particles[i].verletIntegration(dt, damping);
+        });
 
         handleWorldBoundaries();
 
@@ -283,10 +359,12 @@ void ParticleSystem::update() {
         for (const auto& p : particles)
                 maxRadius = std::max(maxRadius, p.getRadius());
 
-        SpatialGrid grid;
-        grid.build(particles, bounds.left, bounds.top,
-                    bounds.right, bounds.bottom, 2.0f * maxRadius);
+        if (maxRadius <= 0.0f) return;
+
         for (int s = 0; s < SUBSTEPS; ++s) {
+                SpatialGrid grid;
+                grid.build(particles, bounds.left, bounds.top,
+                           bounds.right, bounds.bottom, 2.0f * maxRadius);
                 handleCollisionsSpatialGrid(grid);
         }
 }

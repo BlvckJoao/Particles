@@ -1,4 +1,4 @@
-# Install script for directory: /home/joao-pedro/Área de trabalho/Projetos/Particles/libs/glfw/docs
+# Install script for directory: /home/joao/git/Particles/libs/glfw/docs
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

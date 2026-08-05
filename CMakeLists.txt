@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(ParticleSimulation LANGUAGES C CXX)
 
+find_package(Threads REQUIRED)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -30,6 +32,7 @@ set(SOURCES
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
 
 add_executable(ParticleSim ${SOURCES})
+target_link_libraries(ParticleSim PRIVATE Threads::Threads)
 
 # Prefer bundled GLFW if present
 if(EXISTS "${PROJECT_ROOT}/libs/glfw/CMakeLists.txt")
